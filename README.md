@@ -32,15 +32,16 @@ uses local checkouts, which is the development setup. Nothing here needs the
 wallet descriptor: the history comes from the node wallet, the proofs from the
 ledger.
 
-PDF output is optional and needs WeasyPrint with its system libraries:
+PDF output is optional. It needs WeasyPrint's system libraries, then the
+renderer itself, hash-pinned like everything else:
 
 ```sh
-sudo apt install libpango-1.0-0 libpangoft2-1.0-0   # Debian/Ubuntu
-.venv/bin/pip install 'weasyprint>=60'
+sudo apt install libpango-1.0-0 libpangoft2-1.0-0 libharfbuzz0b   # Debian/Ubuntu
+./setup.sh --pdf                                                   # installs requirements-pdf.lock
 ```
 
 Without it `report` still writes `report.html` (print it to PDF from a browser)
-plus `report.json` and `transactions.csv`.
+plus `report.json` and `transactions.csv`; `--pdf` then says what is missing.
 
 ## The flow
 

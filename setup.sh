@@ -5,10 +5,11 @@
 #
 #   ./setup.sh                                          # core and audit from git at CORE_REF / AUDIT_REF
 #   ./setup.sh --core ../bip322-core --audit ../bip322-audit   # local checkouts (editable): development
+#   ./setup.sh --pdf                                    # also WeasyPrint (hash-pinned, requirements-pdf.lock) for report.pdf
 #   ./setup.sh --no-tests
 #
-# PDF output needs WeasyPrint and its system libraries (Pango, Cairo):
-#   sudo apt install libpango-1.0-0 libpangoft2-1.0-0 && .venv/bin/pip install 'weasyprint>=60'
+# --pdf needs WeasyPrint's system libraries first (Debian/Ubuntu):
+#   sudo apt install libpango-1.0-0 libpangoft2-1.0-0 libharfbuzz0b
 #
 # Needs Python >= 3.10, git, and curl (only when python3 has no ensurepip).
 set -euo pipefail
@@ -21,12 +22,14 @@ AUDIT_URL=${AUDIT_URL:-git+ssh://git@github.com/embeddednation/bip322-audit.git}
 CORE_PATH=""
 AUDIT_PATH=""
 RUN_TESTS=1
+WITH_PDF=0
 while [ $# -gt 0 ]; do
   case $1 in
     --core) CORE_PATH=$2; shift ;;
     --audit) AUDIT_PATH=$2; shift ;;
+    --pdf) WITH_PDF=1 ;;
     --no-tests) RUN_TESTS=0 ;;
-    -h|--help) sed -n '2,13p' "$0"; exit 0 ;;
+    -h|--help) sed -n '2,14p' "$0"; exit 0 ;;
     *) echo "unknown option: $1" >&2; exit 2 ;;
   esac
   shift
@@ -61,6 +64,12 @@ if [ -n "$CORE_PATH" ]; then "$PIP" install -q --no-deps -e "$CORE_PATH"; else "
 if [ -n "$AUDIT_PATH" ]; then "$PIP" install -q --no-deps -e "$AUDIT_PATH"; else "$PIP" install -q --no-deps "bip322-audit @ $AUDIT_URL@$AUDIT_REF"; fi
 "$PIP" install -q --no-deps -e .
 "$PIP" install -q "pytest==9.1.1" "ruff==0.16.7"   # pinned: CI and local lint must agree
+
+# --- optional: the PDF renderer -------------------------------------------
+if [ "$WITH_PDF" = 1 ]; then
+  "$PIP" install -q --require-hashes -r requirements-pdf.lock
+  .venv/bin/python -c 'import weasyprint' || { echo "error: WeasyPrint cannot load its system libraries; see the top of this script" >&2; exit 1; }
+fi
 
 # --- tests (the regtest test skips without a Bitcoin Core binary) ------------
 if [ "$RUN_TESTS" = 1 ]; then

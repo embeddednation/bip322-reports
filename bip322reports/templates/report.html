@@ -10,11 +10,13 @@
   h2 { font-size: 13pt; margin: 22px 0 6px; border-bottom: 1px solid #999; padding-bottom: 2px; }
   h3 { font-size: 11pt; margin: 14px 0 4px; }
   .muted { color: #555; }
-  table { border-collapse: collapse; width: 100%; margin: 4px 0 8px; font-size: 9.5pt; }
-  th, td { text-align: left; padding: 3px 6px; border-bottom: 1px solid #ddd; vertical-align: top; }
+  table { border-collapse: collapse; width: 100%; margin: 4px 0 8px; font-size: 9.5pt; table-layout: fixed; }
+  th, td { text-align: left; padding: 3px 6px; border-bottom: 1px solid #ddd; vertical-align: top; overflow-wrap: anywhere; }
+  col.w-time { width: 15%; } col.w-block { width: 8%; } col.w-kind { width: 10%; } col.w-num { width: 14%; } col.w-side { width: 17%; }
+  col.w-out { width: 30%; } col.w-btc { width: 13%; } col.w-key { width: 22%; }
   th { background: #f2f2f2; font-weight: 600; }
   td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
-  code, .mono { font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace; font-size: 8.5pt; }
+  code, .mono { font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace; font-size: 8.5pt; overflow-wrap: anywhere; word-break: break-all; }
   .wrap { word-break: break-all; }
   .ok { color: #106b21; font-weight: 600; }
   .bad { color: #b00020; font-weight: 600; }
@@ -41,6 +43,7 @@ Period from block {{ r.period.start.height }} ({{ r.period.start.time_utc }}) to
 
 <h2>Summary</h2>
 <table class="kv">
+  <colgroup><col style="width:55%"><col></colgroup>
   <tr><td>Opening balance (block {{ r.opening.height }})</td><td class="num">{{ r.opening.total_btc }} BTC · {{ r.opening.coins | length }} outputs</td></tr>
   <tr><td>Received</td><td class="num">{{ r.totals.received_btc }} BTC</td></tr>
   <tr><td>Sent</td><td class="num">{{ r.totals.sent_btc }} BTC</td></tr>
@@ -61,6 +64,7 @@ Period from block {{ r.period.start.height }} ({{ r.period.start.time_utc }}) to
 <h2>Opening balance · block {{ r.opening.height }}</h2>
 {% if r.opening.coins %}
 <table>
+  <colgroup><col class="w-out"><col><col class="w-btc"></colgroup>
   <tr><th>Output</th><th>Address</th><th class="num">BTC</th></tr>
   {% for c in r.opening.coins %}
   <tr><td>{{ tx(c.txid) }}:{{ c.vout }}</td><td>{{ addr(c.address) }}</td><td class="num">{{ c.amount_btc }}</td></tr>
@@ -72,9 +76,10 @@ Period from block {{ r.period.start.height }} ({{ r.period.start.time_utc }}) to
 <h2>Transactions</h2>
 {% if r.transactions %}
 <table>
+  <colgroup><col class="w-time"><col class="w-block"><col><col class="w-kind"><col class="w-num"><col class="w-num">{% if r.fiat %}<col class="w-num"><col class="w-num">{% endif %}</colgroup>
   <tr><th>Time (UTC)</th><th>Block</th><th>Transaction</th><th>Kind</th><th class="num">Net BTC</th><th class="num">Fee BTC</th>{% if r.fiat %}<th class="num">Rate</th><th class="num">Net {{ r.fiat.currency }}</th>{% endif %}</tr>
   {% for t in r.transactions %}
-  <tr><td>{{ t.time_utc }}</td><td>{{ t.height }}</td><td>{{ tx(t.txid) }}</td><td>{{ t.kind }}</td><td class="num">{{ t.net_btc }}</td><td class="num">{{ t.fee_btc or "" }}</td>
+  <tr><td>{{ t.time_utc[:10] }}<br>{{ t.time_utc[11:] }}</td><td>{{ t.height }}</td><td>{{ tx(t.txid) }}</td><td>{{ t.kind }}</td><td class="num">{{ t.net_btc }}</td><td class="num">{{ t.fee_btc or "" }}</td>
     {% if r.fiat %}<td class="num">{{ t.fiat.rate or "" }}</td><td class="num">{{ t.fiat.net or "" }}</td>{% endif %}</tr>
   {% endfor %}
   <tr><th colspan="4">Net</th><th class="num">{{ r.totals.net_btc }}</th><th class="num">{{ r.totals.fees_btc }}</th>{% if r.fiat %}<th></th><th></th>{% endif %}</tr>
@@ -83,6 +88,7 @@ Period from block {{ r.period.start.height }} ({{ r.period.start.time_utc }}) to
 <h3>{{ t.time_utc }} · {{ t.kind }} · {{ t.net_btc }} BTC</h3>
 <p class="mono wrap">{{ tx(t.txid) }}</p>
 <table>
+  <colgroup><col class="w-side"><col><col class="w-btc"></colgroup>
   <tr><th>Side</th><th>Address</th><th class="num">BTC</th></tr>
   {% for c in t.ours_in %}<tr><td>spent from the wallet</td><td>{{ addr(c.address) }}</td><td class="num">{{ c.amount_btc }}</td></tr>{% endfor %}
   {% for c in t.ours_out %}<tr><td>to the wallet</td><td>{{ addr(c.address) }}</td><td class="num">{{ c.amount_btc }}</td></tr>{% endfor %}
@@ -92,13 +98,14 @@ Period from block {{ r.period.start.height }} ({{ r.period.start.time_utc }}) to
 {% endfor %}
 {% else %}<p class="muted">No transactions in the period.</p>{% endif %}
 
-<h2 class="page">Closing balance · block {{ r.closing.height }}</h2>
+<h2>Closing balance · block {{ r.closing.height }}</h2>
 <p class="muted">Each output is backed by the BIP-322 proof of control whose snapshot listed it; every proof was re-verified when this report was generated. Proofs are per address: a signature over the message shown, produced by the keys that lock the address.</p>
 <table>
+  <colgroup><col class="w-out"><col><col class="w-btc"><col style="width:24%"></colgroup>
   <tr><th>Output</th><th>Address</th><th class="num">BTC</th><th>Proof</th></tr>
   {% for c in r.closing.coins %}
   <tr>
-    <td>{{ tx(c.txid) }}:{{ c.vout }}<br><span class="muted">block {{ c.height }}</span></td>
+    <td><span class="mono">{{ tx(c.txid) }}:{{ c.vout }}</span><br><span class="muted">block {{ c.height }}</span></td>
     <td>{{ addr(c.address) }}</td>
     <td class="num">{{ c.amount_btc }}</td>
     <td>{% if c.proof %}
@@ -119,8 +126,9 @@ A new bundle (<code>bip322-audit snapshot --skip-proven LEDGER</code>) covers th
 <h2>Proofs</h2>
 {% if r.bundles %}
 {% for b in r.bundles %}
-<h3>{{ b.path }}</h3>
+<h3>{{ b.bundle }}</h3>
 <table class="kv">
+  <colgroup><col style="width:22%"><col></colgroup>
   <tr><td>Message</td><td><code class="wrap">{{ b.message }}</code></td></tr>
   <tr><td>Stamp block</td><td>{{ b.stamp.height }} · {{ b.stamp.hash }} · {{ b.stamp.time }}</td></tr>
   <tr><td>Policy</td><td>{{ b.policy }}</td></tr>
@@ -131,6 +139,7 @@ A new bundle (<code>bip322-audit snapshot --skip-proven LEDGER</code>) covers th
 {% endfor %}
 <h3>Signatures</h3>
 <table>
+  <colgroup><col style="width:30%"><col class="w-key"><col></colgroup>
   <tr><th>Address</th><th>Bundle</th><th>Signature</th></tr>
   {% for c in r.closing.coins if c.proof %}
   <tr><td>{{ addr(c.address) }}</td><td>{{ c.proof.bundle }}</td><td><code class="wrap">{{ c.proof.signature }}</code></td></tr>

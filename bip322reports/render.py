@@ -6,12 +6,16 @@ import csv
 from pathlib import Path
 
 from bip322audit.rpc import btc
-from jinja2 import Environment, PackageLoader, select_autoescape
+from jinja2 import Environment, PackageLoader, StrictUndefined, select_autoescape
 
 
 def _env() -> Environment:
     env = Environment(
-        loader=PackageLoader("bip322reports", "templates"), autoescape=select_autoescape(["html"]), trim_blocks=True, lstrip_blocks=True
+        loader=PackageLoader("bip322reports", "templates"),
+        autoescape=select_autoescape(["html"]),
+        undefined=StrictUndefined,
+        trim_blocks=True,
+        lstrip_blocks=True,
     )
     env.filters["btc"] = btc
     env.filters["short"] = lambda s, n=16: (s[:n] + "…") if s and len(s) > n else s

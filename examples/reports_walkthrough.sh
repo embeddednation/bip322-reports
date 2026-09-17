@@ -12,6 +12,7 @@ PORT=18774
 CLI="$CORE/bin/bitcoin-cli -regtest -datadir=$DATADIR -rpcport=$PORT -rpcuser=demo -rpcpassword=demo"
 WORK=${1:-examples/reports-out}; rm -rf "$WORK"; mkdir -p "$WORK"
 DEV=.venv/bin/bip322-dev; AUDIT=.venv/bin/bip322-audit; REPORTS=.venv/bin/bip322-reports
+PDF=$(.venv/bin/python -c 'import weasyprint' 2>/dev/null && echo --pdf || true)   # report.pdf when WeasyPrint is installed
 LEDGER="$WORK/ledger"
 step() { printf '\n\033[1m=== %s ===\033[0m\n' "$*"; }
 run() { printf '$ %s\n' "$*" >&2; "$@"; }
@@ -77,7 +78,7 @@ run $AUDIT --cli "$CLI" -w watch snapshot --depth 1 --text "Proof of control {da
 sign_bundle "$(ls -d "$LEDGER"/snapshot-*/ | grep -v first | head -1)"
 
 step "6. the year's balance report: opening and closing balances, movements, every closing coin backed by a verified proof"
-run $REPORTS --cli "$CLI" -w watch report --year "$(date -u +%Y)" --ledger "$LEDGER" --label demo-2of3 -o "$WORK/report"
+run $REPORTS --cli "$CLI" -w watch report --year "$(date -u +%Y)" --ledger "$LEDGER" --label demo-2of3 $PDF -o "$WORK/report"
 ls "$WORK/report"
 
 step "7. the same, from a cached history and for two heights"
