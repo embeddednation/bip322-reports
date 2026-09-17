@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.3.0 (2026-09-17)
+
+- The report is a statement: header with holder, wallet, period, preparation
+  and units; assertion paragraph; checks; holdings at start and end; movements
+  with a running balance; proof bundles; signatures; basis of preparation and
+  limitations; verification procedures. Accounting conventions: units once,
+  negatives in parentheses, double-rule totals, tabular figures.
+- `--holder NAME`; a report reference derived from the stated facts (the same
+  facts give the same reference), printed on every page and in `report.json`.
+
 ## 0.2.3 (2026-09-17)
 
 - Depends on bip322-audit 0.7.1 and, through it, bip322-core 0.6.0: `bip322 reports report ...` works via the core's git-style dispatch.

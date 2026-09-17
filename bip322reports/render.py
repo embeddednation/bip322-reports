@@ -18,6 +18,7 @@ def _env() -> Environment:
         lstrip_blocks=True,
     )
     env.filters["btc"] = btc
+    env.filters["acct"] = lambda text: f"({text[1:]})" if str(text).startswith("-") else str(text)  # accounting negatives
     env.filters["short"] = lambda s, n=16: (s[:n] + "…") if s and len(s) > n else s
     return env
 

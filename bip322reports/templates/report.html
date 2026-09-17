@@ -4,30 +4,32 @@
 <meta charset="utf-8">
 <title>{{ r.label }} · {{ r.period.label }}</title>
 <style>
-  :root { --ink: #1b1b1b; --muted: #6b6b6b; --rule: #d9d9d9; --head: #f3f4f6; --zebra: #fafafa; --ok: #0f7a3a; --bad: #b3261e; --accent: #1f4e79; }
+  :root { --ink: #1b1b1b; --muted: #6b6b6b; --rule: #d6d6d6; --head: #f2f3f5; --zebra: #fafafa; --ok: #0f7a3a; --bad: #b3261e; --accent: #1f3a5f; }
   @page {
-    size: A4; margin: 20mm 16mm 18mm 16mm;
-    @top-left { content: "Balance report with proof of control"; font: 8pt sans-serif; color: #6b6b6b; }
+    size: A4; margin: 22mm 16mm 20mm 16mm;
+    @top-left { content: "Statement of bitcoin holdings and movements"; font: 8pt sans-serif; color: #6b6b6b; }
     @top-right { content: string(doc-title); font: 8pt sans-serif; color: #6b6b6b; }
-    @bottom-left { content: "Generated " string(generated) " by " string(tool); font: 8pt sans-serif; color: #6b6b6b; }
+    @bottom-left { content: "Reference " string(ref) " · generated " string(generated); font: 8pt sans-serif; color: #6b6b6b; }
     @bottom-right { content: "Page " counter(page) " of " counter(pages); font: 8pt sans-serif; color: #6b6b6b; }
   }
   html { font: 10pt/1.45 "Inter", "Helvetica Neue", Arial, "DejaVu Sans", sans-serif; color: var(--ink); }
   body { margin: 0; }
-  h1 { font-size: 22pt; line-height: 1.15; margin: 0; letter-spacing: -0.01em; string-set: doc-title content(); }
-  h2 { font-size: 13pt; color: var(--accent); margin: 26px 0 8px; padding-bottom: 4px; border-bottom: 2px solid var(--accent); break-after: avoid; }
+  h1 { font-size: 21pt; line-height: 1.15; margin: 0; letter-spacing: -0.01em; string-set: doc-title content(); }
+  h2 { font-size: 12.5pt; color: var(--accent); margin: 26px 0 8px; padding-bottom: 4px; border-bottom: 2px solid var(--accent); break-after: avoid; }
   h3 { font-size: 10.5pt; margin: 16px 0 4px; break-after: avoid; }
   p { margin: 4px 0 8px; }
   .eyebrow { font-size: 8.5pt; letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted); margin: 0 0 6px; }
-  .lead { font-size: 10.5pt; color: var(--muted); margin: 6px 0 0; }
   .muted { color: var(--muted); }
   .small { font-size: 8.5pt; }
-  .head { display: table; width: 100%; margin-bottom: 14px; }
+  .head { display: table; width: 100%; margin-bottom: 8px; }
   .head > div { display: table-cell; vertical-align: top; }
-  .head .result { text-align: right; width: 30%; }
-  .pill { display: inline-block; padding: 3px 12px; border-radius: 999px; font-weight: 700; font-size: 10pt; color: #fff; }
+  .head .result { text-align: right; width: 26%; }
+  .pill { display: inline-block; padding: 3px 12px; border-radius: 999px; font-weight: 700; font-size: 10pt; }
   .pill.ok { background: var(--ok); color: #fff; } .pill.bad { background: var(--bad); color: #fff; }
-  .tiles { display: table; width: 100%; table-layout: fixed; border-spacing: 8px 0; margin: 10px -8px 6px; }
+  table.facts { margin: 8px 0 14px; font-size: 9.2pt; }
+  table.facts td { border: 0; padding: 2px 6px 2px 0; }
+  table.facts td:first-child { width: 17%; color: var(--muted); }
+  .tiles { display: table; width: 100%; table-layout: fixed; border-spacing: 8px 0; margin: 4px -8px 6px; }
   .tile { display: table-cell; background: var(--head); border-radius: 6px; padding: 10px 12px; vertical-align: top; }
   .tile .k { font-size: 8pt; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
   .tile .v { font-size: 15pt; font-weight: 700; font-variant-numeric: tabular-nums; margin-top: 2px; white-space: nowrap; }
@@ -37,7 +39,7 @@
   th { background: var(--head); font-weight: 600; font-size: 8.5pt; letter-spacing: 0.03em; border-bottom: 1.5px solid #bbb; }
   tbody tr:nth-child(even) td { background: var(--zebra); }
   tr { break-inside: avoid; }
-  tr.total td { font-weight: 700; border-top: 1.5px solid #bbb; background: #fff; }
+  tr.total td { font-weight: 700; background: #fff; border-top: 1px solid #333; border-bottom: 3px double #333; }
   td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
   .mono, code { font-family: "JetBrains Mono", Menlo, Consolas, "DejaVu Sans Mono", monospace; font-size: 8pt; overflow-wrap: anywhere; word-break: break-all; }
   .kv td:first-child { width: 30%; color: var(--muted); }
@@ -48,9 +50,9 @@
   .txcard { margin: 12px 0 4px; break-inside: avoid; }
   .txcard .title { font-weight: 600; border-top: 2px solid var(--accent); padding-top: 4px; }
   a { color: inherit; text-decoration: none; }
-  ol { padding-left: 18px; } li { margin-bottom: 4px; }
-  span.meta { string-set: generated attr(data-generated), tool attr(data-tool); }
-  col.w-time { width: 15%; } col.w-block { width: 8%; } col.w-kind { width: 9%; } col.w-num { width: 14%; }
+  ol, ul { padding-left: 18px; } li { margin-bottom: 4px; }
+  span.meta { string-set: generated attr(data-generated), ref attr(data-ref); }
+  col.w-date { width: 14%; } col.w-block { width: 8%; } col.w-kind { width: 9%; } col.w-num { width: 13%; }
   col.w-side { width: 18%; } col.w-out { width: 31%; } col.w-btc { width: 13%; } col.w-proof { width: 27%; }
 </style>
 </head>
@@ -62,31 +64,39 @@
   {% if explorer %}<a class="mono" href="{{ explorer }}/tx/{{ t }}">{{ t }}</a>{% else %}<span class="mono">{{ t }}</span>{% endif %}
 {%- endmacro %}
 {% macro yesno(v) -%}{% if v %}<span class="ok">✓</span>{% else %}<span class="bad">✗</span>{% endif %}{%- endmacro %}
-<span class="meta" data-generated="{{ r.generated_utc }}" data-tool="{{ r.tool }}"></span>
+<span class="meta" data-generated="{{ r.generated_utc }}" data-ref="{{ r.report_id }}"></span>
 
 <div class="head">
   <div>
-    <p class="eyebrow">Balance report with proof of control</p>
+    <p class="eyebrow">Statement of bitcoin holdings and movements</p>
     <h1>{{ r.label }} · {{ r.period.label }}</h1>
-    <p class="lead">Blocks {{ r.period.start.height }} to {{ r.period.end.height }} · {{ r.period.start.time_utc[:10] }} to {{ r.period.end.time_utc[:10] }}{% if r.period.to_tip %} (the chain tip when the report was made){% endif %} · chain {{ r.chain }}</p>
   </div>
   <div class="result">{% if r.ok %}<span class="pill ok">OK</span>{% else %}<span class="pill bad">ATTENTION</span>{% endif %}</div>
 </div>
+<table class="facts">
+  <colgroup><col><col></colgroup>
+  {% if r.holder %}<tr><td>Holder</td><td>{{ r.holder }}</td></tr>{% endif %}
+  <tr><td>Wallet</td><td>{{ r.label }} · {{ r.chain }} chain</td></tr>
+  <tr><td>Period</td><td>{{ r.period.start.time_utc[:10] }} to {{ r.period.end.time_utc[:10] }}: after block {{ r.period.start.height }} ({{ r.period.start.time_utc }}) up to and including block {{ r.period.end.height }} ({{ r.period.end.time_utc }}){% if r.period.to_tip %}, the chain tip when this statement was prepared{% endif %}</td></tr>
+  <tr><td>Prepared</td><td>{{ r.generated_utc }} by {{ r.tool }} · reference {{ r.report_id }}</td></tr>
+  <tr><td>Amounts</td><td>BTC, exact to eight decimals (1 BTC = 100 000 000 satoshi); negative amounts in parentheses{% if r.fiat %}; {{ r.fiat.currency }} values from {{ r.fiat.source }}{% endif %}</td></tr>
+</table>
 
 <div class="tiles">
-  <div class="tile"><div class="k">Opening balance</div><div class="v">{{ r.opening.total_btc }}</div><div class="s">BTC · block {{ r.opening.height }} · {{ r.opening.coins | length }} outputs</div></div>
-  <div class="tile"><div class="k">Closing balance</div><div class="v">{{ r.closing.total_btc }}</div><div class="s">BTC · block {{ r.closing.height }} · {{ r.closing.coins | length }} outputs</div></div>
-  <div class="tile"><div class="k">Net change</div><div class="v">{{ r.totals.net_btc }}</div><div class="s">BTC · {{ r.totals.transactions }} transactions · fees {{ r.totals.fees_btc }}</div></div>
-  <div class="tile"><div class="k">Proven</div><div class="v">{{ r.coverage.covered_count }} / {{ r.coverage.total_count }}</div><div class="s">closing outputs · {{ r.coverage.covered_btc }} BTC</div></div>
+  <div class="tile"><div class="k">Opening balance</div><div class="v">{{ r.opening.total_btc }}</div><div class="s">block {{ r.opening.height }} · {{ r.opening.coins | length }} outputs</div></div>
+  <div class="tile"><div class="k">Closing balance</div><div class="v">{{ r.closing.total_btc }}</div><div class="s">block {{ r.closing.height }} · {{ r.closing.coins | length }} outputs</div></div>
+  <div class="tile"><div class="k">Net change</div><div class="v">{{ r.totals.net_btc | acct }}</div><div class="s">{{ r.totals.transactions }} transactions · fees {{ r.totals.fees_btc }}</div></div>
+  <div class="tile"><div class="k">Proven</div><div class="v">{{ r.coverage.covered_count }} / {{ r.coverage.total_count }}</div><div class="s">closing outputs · {{ r.coverage.covered_btc }}</div></div>
 </div>
 
-<h2>Checks</h2>
+<h2>Assertion and checks</h2>
+<p>The holder asserts that the wallet held the outputs listed in section 3 at block {{ r.closing.height }}, controls the keys behind each of their addresses, and that the movements in section 2 are all of the wallet's transactions in the period. The checks below were run against a Bitcoin node when this statement was prepared; section 7 describes how a reader repeats them.</p>
 <table class="checks">
   <colgroup><col><col style="width:56%"><col></colgroup>
-  <tr><td>{{ yesno(r.reconciliation.ok) }}</td><td>Reconciliation: opening + net change = closing</td>
-      <td class="num">{{ r.opening.total_btc }} + {{ r.totals.net_btc }} = {{ r.closing.total_btc }}{% if not r.reconciliation.ok %} (off by {{ r.reconciliation.diff_sat | btc }}){% endif %}</td></tr>
-  <tr><td>{{ yesno(r.coverage.complete) }}</td><td>Every closing output is backed by a verified BIP-322 proof of its address</td>
-      <td class="num">{{ r.coverage.covered_count }} of {{ r.coverage.total_count }}{% if not r.coverage.complete %} · {{ r.coverage.uncovered_btc }} BTC without proof{% endif %}</td></tr>
+  <tr><td>{{ yesno(r.reconciliation.ok) }}</td><td>Opening balance + net change = closing balance</td>
+      <td class="num">{{ r.opening.total_btc }} + {{ r.totals.net_btc | acct }} = {{ r.closing.total_btc }}{% if not r.reconciliation.ok %} (off by {{ r.reconciliation.diff_sat | btc }}){% endif %}</td></tr>
+  <tr><td>{{ yesno(r.coverage.complete) }}</td><td>Every closing output is backed by a verified BIP-322 proof of control of its address</td>
+      <td class="num">{{ r.coverage.covered_count }} of {{ r.coverage.total_count }}{% if not r.coverage.complete %} · {{ r.coverage.uncovered_btc }} without proof{% endif %}</td></tr>
   <tr><td>{% if r.period.to_tip %}<span class="muted">–</span>{% else %}{{ yesno(r.coverage.covered_after_period_count == r.coverage.total_count) }}{% endif %}</td>
       <td>Proofs stamped after the period's end (control demonstrated after the closing block)</td>
       <td class="num">{% if r.period.to_tip %}not applicable: the period runs to the tip{% else %}{{ r.coverage.covered_after_period_count }} of {{ r.coverage.total_count }}{% endif %}</td></tr>
@@ -97,39 +107,40 @@
   <tr><td>{{ yesno(r.bundles | selectattr("verified") | list | length == r.bundles | length) }}</td><td>Proof bundles verified against the node (signatures, stamp blocks, listed outputs)</td>
       <td class="num">{{ r.bundles | selectattr("verified") | list | length }} of {{ r.bundles | length }}</td></tr>
 </table>
-<p class="small muted">Period bounds are the last block before each instant asked for{% if r.period.start_when %} ({{ r.period.start_when }} and {{ r.period.end_when }}, UTC){% endif %}. Opening figures are as of block {{ r.period.start.height }} ({{ r.period.start.time_utc }}), closing figures as of block {{ r.period.end.height }} ({{ r.period.end.time_utc }}).{% if r.fiat %} Fiat values in {{ r.fiat.currency }} from {{ r.fiat.source }}.{% endif %}</p>
 
-<h2>1. Opening balance · block {{ r.opening.height }}</h2>
+<h2>1. Holdings at the start of the period · block {{ r.opening.height }}</h2>
 {% if r.opening.coins %}
 <table>
   <colgroup><col class="w-out"><col><col class="w-btc"></colgroup>
-  <thead><tr><th>Output</th><th>Address</th><th class="num">BTC</th></tr></thead>
+  <thead><tr><th>Output</th><th>Address</th><th class="num">Amount</th></tr></thead>
   <tbody>
   {% for c in r.opening.coins %}
   <tr><td><span class="mono">{{ tx(c.txid) }}:{{ c.vout }}</span></td><td>{{ addr(c.address) }}</td><td class="num">{{ c.amount_btc }}</td></tr>
   {% endfor %}
-  <tr class="total"><td colspan="2">Total</td><td class="num">{{ r.opening.total_btc }}</td></tr>
+  <tr class="total"><td colspan="2">Opening balance</td><td class="num">{{ r.opening.total_btc }}</td></tr>
   </tbody>
 </table>
-{% else %}<p class="muted">No outputs.</p>{% endif %}
+{% else %}<p class="muted">No outputs: the balance at the start of the period was 0.00000000.</p>{% endif %}
 
-<h2>2. Movements</h2>
+<h2>2. Movements in the period</h2>
 {% if r.transactions %}
 <table>
-  <colgroup><col class="w-time"><col class="w-block"><col><col class="w-kind"><col class="w-num"><col class="w-num">{% if r.fiat %}<col class="w-num"><col class="w-num">{% endif %}</colgroup>
-  <thead><tr><th>Time (UTC)</th><th>Block</th><th>Transaction</th><th>Kind</th><th class="num">Net BTC</th><th class="num">Fee BTC</th>{% if r.fiat %}<th class="num">Rate</th><th class="num">Net {{ r.fiat.currency }}</th>{% endif %}</tr></thead>
+  <colgroup><col class="w-date"><col class="w-block"><col><col class="w-kind"><col class="w-num"><col class="w-num"><col class="w-num">{% if r.fiat %}<col class="w-num">{% endif %}</colgroup>
+  <thead><tr><th>Date (UTC)</th><th>Blk</th><th>Transaction</th><th>Kind</th><th class="num">Net</th><th class="num">Fee</th><th class="num">Balance</th>{% if r.fiat %}<th class="num">Net {{ r.fiat.currency }}</th>{% endif %}</tr></thead>
   <tbody>
+  <tr><td colspan="6" class="muted">Opening balance, block {{ r.opening.height }}</td><td class="num">{{ r.opening.total_btc }}</td>{% if r.fiat %}<td></td>{% endif %}</tr>
   {% for t in r.transactions %}
-  <tr><td>{{ t.time_utc[:10] }}<br><span class="muted">{{ t.time_utc[11:] }}</span></td><td>{{ t.height }}</td><td>{{ tx(t.txid) }}</td><td>{{ t.kind }}</td><td class="num">{{ t.net_btc }}</td><td class="num">{{ t.fee_btc or "" }}</td>
-    {% if r.fiat %}<td class="num">{{ t.fiat.rate or "" }}</td><td class="num">{{ t.fiat.net or "" }}</td>{% endif %}</tr>
+  <tr><td>{{ t.time_utc[:10] }}<br><span class="muted">{{ t.time_utc[11:] }}</span></td><td>{{ t.height }}</td><td>{{ tx(t.txid) }}</td><td>{{ t.kind }}</td><td class="num">{{ t.net_btc | acct }}</td><td class="num">{{ t.fee_btc or "" }}</td><td class="num">{{ t.balance_after_btc }}</td>
+    {% if r.fiat %}<td class="num">{{ (t.fiat.net | acct) if t.fiat.net else "" }}</td>{% endif %}</tr>
   {% endfor %}
-  <tr class="total"><td colspan="4">Received {{ r.totals.received_btc }} · sent {{ r.totals.sent_btc }} · fees {{ r.totals.fees_btc }}</td><td class="num">{{ r.totals.net_btc }}</td><td class="num">{{ r.totals.fees_btc }}</td>{% if r.fiat %}<td></td><td></td>{% endif %}</tr>
+  <tr class="total"><td colspan="4">Closing balance, block {{ r.closing.height }}</td><td class="num">{{ r.totals.net_btc | acct }}</td><td class="num">{{ r.totals.fees_btc }}</td><td class="num">{{ r.closing.total_btc }}</td>{% if r.fiat %}<td></td>{% endif %}</tr>
   </tbody>
 </table>
+<p class="small muted">Received {{ r.totals.received_btc }} · paid out {{ r.totals.sent_btc }} · fees {{ r.totals.fees_btc }}. Net is what the wallet received minus what it spent, fees included; "internal" moves coins between the wallet's own addresses and cost only the fee.</p>
 <h3>Transaction details</h3>
 {% for t in r.transactions %}
 <div class="txcard">
-  <div class="title">{{ t.time_utc }} · {{ t.kind }} · {{ t.net_btc }} BTC{% if t.fee_btc %} · fee {{ t.fee_btc }}{% endif %}{% if r.fiat and t.fiat.net %} · {{ t.fiat.net }} {{ r.fiat.currency }}{% endif %}</div>
+  <div class="title">{{ t.time_utc }} · {{ t.kind }} · {{ t.net_btc | acct }}{% if t.fee_btc %} · fee {{ t.fee_btc }}{% endif %}{% if r.fiat and t.fiat.net %} · {{ t.fiat.net | acct }} {{ r.fiat.currency }} at {{ t.fiat.rate }}{% endif %}</div>
   <div class="mono">{{ tx(t.txid) }}</div>
   <table>
     <colgroup><col class="w-side"><col><col class="w-btc"></colgroup>
@@ -141,13 +152,13 @@
   </table>
 </div>
 {% endfor %}
-{% else %}<p class="muted">No transactions in the period.</p>{% endif %}
+{% else %}<p class="muted">No transactions in the period; the closing balance equals the opening balance.</p>{% endif %}
 
-<h2>3. Closing balance · block {{ r.closing.height }}</h2>
-<p class="small muted">Each output is backed by a BIP-322 proof of control for its address, re-verified when this report was generated. A proof is a signature over the message shown, made by the keys that lock the address, so it covers every output paid there, including outputs created after the proof.</p>
+<h2>3. Holdings at the end of the period · block {{ r.closing.height }}</h2>
+<p class="small muted">Each output is backed by a BIP-322 proof of control for its address, re-verified when this statement was prepared. A proof is a signature over the message shown in section 4, made by the keys that lock the address, so it covers every output paid there, including outputs created after the proof.</p>
 <table>
   <colgroup><col class="w-out"><col><col class="w-btc"><col class="w-proof"></colgroup>
-  <thead><tr><th>Output</th><th>Address</th><th class="num">BTC</th><th>Proof</th></tr></thead>
+  <thead><tr><th>Output</th><th>Address</th><th class="num">Amount</th><th>Proof of control</th></tr></thead>
   <tbody>
   {% for c in r.closing.coins %}
   <tr>
@@ -161,11 +172,11 @@
       {% else %}<span class="badge bad">no proof</span>{% endif %}</td>
   </tr>
   {% endfor %}
-  <tr class="total"><td colspan="2">Total</td><td class="num">{{ r.closing.total_btc }}</td><td>{{ r.coverage.covered_btc }} BTC proven</td></tr>
+  <tr class="total"><td colspan="2">Closing balance</td><td class="num">{{ r.closing.total_btc }}</td><td>{{ r.coverage.covered_btc }} proven</td></tr>
   </tbody>
 </table>
 {% if r.coverage.uncovered %}
-<p class="bad">Outputs without a verified proof: {% for u in r.coverage.uncovered %}{{ u.txid[:16] }}…:{{ u.vout }} ({{ u.amount_btc }} BTC){% if not loop.last %}, {% endif %}{% endfor %}.</p>
+<p class="bad">Outputs without a verified proof: {% for u in r.coverage.uncovered %}{{ u.txid[:16] }}…:{{ u.vout }} ({{ u.amount_btc }}){% if not loop.last %}, {% endif %}{% endfor %}.</p>
 {% endif %}
 
 <h2>4. Proof bundles</h2>
@@ -179,7 +190,7 @@
   <tr><td>Stamp block</td><td>{{ b.stamp.height }} · {{ b.stamp.time }}<br><span class="mono">{{ b.stamp.hash }}</span></td></tr>
   <tr><td>Policy</td><td>{{ b.policy }}</td></tr>
   <tr><td>Verification now</td><td>{% if b.verified %}<span class="ok">verified</span>{% else %}<span class="bad">not verified{% if b.error %}: {{ b.error }}{% endif %}</span>{% endif %} · signatures {{ b.signatures }}{% if b.stamp_ok is not none %} · stamp {{ "ok" if b.stamp_ok else "failed" }}{% endif %}{% if b.contradictions %} · <span class="bad">{{ b.contradictions }} contradiction(s)</span>{% endif %}</td></tr>
-  <tr><td>Covers</td><td>{{ b.used_for }} closing output(s) in this report · {{ b.outputs }} output(s) listed at the stamp, {{ b.total_sat | btc }} BTC</td></tr>
+  <tr><td>Covers</td><td>{{ b.used_for }} closing output(s) in this statement · {{ b.outputs }} output(s) listed at the stamp, {{ b.total_sat | btc }} BTC</td></tr>
   </tbody>
 </table>
 {% endfor %}
@@ -190,11 +201,11 @@
 {% endif %}
 {% if r.pending_transactions %}
 <h3>Unconfirmed transactions (in no balance)</h3>
-<ul>{% for t in r.pending_transactions %}<li>{{ tx(t.txid) }} · {{ t.kind }} · {{ t.net_btc }} BTC</li>{% endfor %}</ul>
+<ul>{% for t in r.pending_transactions %}<li>{{ tx(t.txid) }} · {{ t.kind }} · {{ t.net_btc | acct }}</li>{% endfor %}</ul>
 {% endif %}
 
 <h2>5. Signatures</h2>
-<p class="small muted">The BIP-322 signature backing each closing output, as verified. Each is the witness that satisfies the address's script for the message of its bundle.</p>
+<p class="small muted">The BIP-322 signature backing each closing output, as verified: the witness that satisfies the address's script for the message of its bundle.</p>
 <table>
   <colgroup><col style="width:30%"><col style="width:18%"><col></colgroup>
   <thead><tr><th>Address</th><th>Bundle</th><th>Signature</th></tr></thead>
@@ -205,12 +216,23 @@
   </tbody>
 </table>
 
-<h2>6. Verifying this report independently</h2>
-<p class="small muted">Every claim above is checkable on any Bitcoin node with the chain, without a wallet or an index.</p>
+<h2>6. Basis of preparation and limitations</h2>
+<ul class="small">
+  <li><strong>Point in time.</strong> Holdings are stated as of the blocks named; nothing here says what the wallet holds after block {{ r.closing.height }}.</li>
+  <li><strong>Control, not title.</strong> A proof shows that the keys behind an address signed the message. It does not show who owns the coins, whether they are pledged, lent or otherwise encumbered, or what liabilities stand against them.</li>
+  <li><strong>Completeness.</strong> The movements and holdings are those of this wallet as known to the holder's node. That the wallet is the holder's only one, or that all of its addresses are in the node, rests on the holder's representation; no cryptographic check establishes it.</li>
+  <li><strong>Proofs are per address.</strong> An address proven once is covered for every output paid to it. The date of each proof is its stamp block; the checks above say whether it postdates the period.</li>
+  <li><strong>No wallet structure is disclosed.</strong> The statement and the bundles name addresses and outputs only; they carry no descriptor, extended public key or derivation path.</li>
+  {% if r.fiat %}<li><strong>Fiat values</strong> are informational, from rates the holder supplied ({{ r.fiat.source }}), at the rate in force on each transaction's day.</li>{% endif %}
+</ul>
+
+<h2>7. Verification procedures</h2>
+<p class="small muted">Every figure and proof above is checkable on any Bitcoin node with the chain, without a wallet or an index. The bundles are in <code>ledger/</code> next to this statement.</p>
 <ol class="small">
-  <li><strong>Proofs.</strong> For each bundle in <code>ledger/</code>: <code>bip322-audit verify ledger/&lt;bundle&gt;/proofs.json</code>. It checks every signature against its address, the stamp block, and that each listed output existed at the stamp with the stated amount (and, for outputs spent since, that they were unspent at the stamp). A second opinion on any signature: <code>bip322-refcheck ADDRESS SIGNATURE MESSAGE</code> runs independent implementations beside it.</li>
-  <li><strong>Balances.</strong> Each closing output: <code>bitcoin-cli gettxout TXID VOUT</code>; each opening output, and any spent since: the creating transaction by txid and block.</li>
-  <li><strong>Movements.</strong> Each transaction by txid, with the inputs and outputs listed in section 2.</li>
+  <li><strong>Proofs.</strong> For each bundle: <code>bip322-audit verify ledger/&lt;bundle&gt;/proofs.json</code>. This checks every signature against its address, the stamp block, and that each listed output existed at the stamp with the stated amount (and, for outputs spent since, that they were unspent at the stamp). For a second opinion on a signature, <code>bip322-refcheck ADDRESS SIGNATURE MESSAGE</code> runs independent implementations beside it.</li>
+  <li><strong>Closing holdings.</strong> For each output in section 3: <code>bitcoin-cli gettxout TXID VOUT</code> shows it unspent with the stated amount and address, or, if spent since, its creating transaction by txid and block shows the same.</li>
+  <li><strong>Opening holdings and movements.</strong> Each transaction in section 2 by txid, with the inputs and outputs listed; the running balance follows from the opening balance and the net of each.</li>
+  <li><strong>Reference.</strong> The reference {{ r.report_id }} in the footer is derived from the figures stated; <code>report.json</code> carries the same reference and every figure in machine-readable form.</li>
 </ol>
 </body>
 </html>

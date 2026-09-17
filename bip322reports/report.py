@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import hashlib
+import json
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -23,6 +25,7 @@ def build_report(
     period: Period,
     *,
     label: str,
+    holder: str | None = None,
     ledger_roots=(),
     cli: BitcoinCli | None = None,
     rates: Rates | None = None,
@@ -62,8 +65,12 @@ def build_report(
 
     tx_rows = []
     received = sent = fees = 0
+    running = opening_sat
     for tx in movements:
         row = tx.to_dict()
+        running += tx.net_sat
+        row["balance_after_sat"] = running
+        row["balance_after_btc"] = btc(running)
         if tx.kind == "receive":
             row["others_out"] = []  # a payer's own change is not the wallet's business
         if rates:
@@ -85,6 +92,7 @@ def build_report(
         "tool": TOOL,
         "generated_utc": _now(),
         "label": label,
+        "holder": holder,
         "chain": history.chain,
         "history_fetched_utc": history.fetched_utc,
         "period": period.to_dict(),
@@ -131,9 +139,16 @@ def build_report(
         "fiat": rates.to_dict() if rates else None,
         "node_check": _node_check(cli, history, period, closing) if cli is not None else None,
     }
+    report["report_id"] = _report_id(report)
     node_ok = report["node_check"] is None or report["node_check"].get("ok") is not False  # None: could not be checked, not a failure
     report["ok"] = bool(report["reconciliation"]["ok"] and report["coverage"]["complete"] and node_ok)
     return report
+
+
+def _report_id(report: dict) -> str:
+    """A short identifier of the facts stated: the same facts give the same id, whenever the report is generated."""
+    facts = {k: report[k] for k in ("label", "chain", "period", "opening", "closing", "transactions")}
+    return hashlib.sha256(json.dumps(facts, sort_keys=True, default=str).encode()).hexdigest()[:16]
 
 
 def _relative_dir(path, roots) -> str:
@@ -168,7 +183,9 @@ def format_summary(report: dict) -> str:
     """The terse text summary printed on stderr."""
     p, r, c = report["period"], report["reconciliation"], report["coverage"]
     lines = [
-        f"{report['label']}: {p['label']}  blocks {p['start']['height']} -> {p['end']['height']}" + ("  (to tip)" if p["to_tip"] else ""),
+        f"{report['label']}: {p['label']}  blocks {p['start']['height']} -> {p['end']['height']}"
+        + ("  (to tip)" if p["to_tip"] else "")
+        + f"  ref {report['report_id']}",
         f"opening {report['opening']['total_btc']} BTC  closing {report['closing']['total_btc']} BTC  net {report['totals']['net_btc']} BTC  "
         f"({report['totals']['transactions']} transactions, fees {report['totals']['fees_btc']} BTC)",
         f"reconciliation: {'ok' if r['ok'] else 'FAILED (diff ' + btc(r['diff_sat']) + ' BTC)'}",
