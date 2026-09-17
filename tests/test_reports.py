@@ -323,7 +323,14 @@ def test_change_address_proven_before_the_spend_covers_the_change_output(tmp_pat
     assert "after the period's end" in render_html(report40)
     assert by_out[("bb", 0)]["lists_output"] and not by_out[("bb", 0)]["before_output"]
     assert by_out[("ee", 0)] is None  # the internal move went to a3, never proven
-    assert "before this output was received" in render_html(report)
+    html = render_html(report)
+    assert "before these coins were received" in html and "verifymessage" in html and "VALID" in html
+    by_addr = {a["address"]: a for a in report["closing"]["addresses"]}
+    assert (
+        by_addr[wallet.derive(1, 1).address]["proof"]["before_coins"] == "all"
+        and by_addr[wallet.derive(1, 1).address]["total_sat"] == 29_000_000
+    )
+    assert report["coverage"]["addresses_total"] == 3 and report["coverage"]["addresses_covered"] == 2
     # after the year-end bundle nothing is left to prove
     with pytest.raises(Exception, match="already proven"):
         take_snapshot(node40, wallet, "x", skip_addresses=proven_addresses([ledger]))

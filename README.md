@@ -24,7 +24,7 @@ One line, into a fresh venv; bip322-audit and bip322-core come along at their
 pinned tags, and the three commands land in the venv's `bin`:
 
 ```sh
-python3 -m venv ~/.bip322 && ~/.bip322/bin/pip install "bip322-reports[kernel] @ git+ssh://git@github.com/embeddednation/bip322-reports.git@v0.3.2"
+python3 -m venv ~/.bip322 && ~/.bip322/bin/pip install "bip322-reports[kernel] @ git+ssh://git@github.com/embeddednation/bip322-reports.git@v0.3.3"
 export PATH="$HOME/.bip322/bin:$PATH"
 bip322 engines && bip322-audit help && bip322-reports help
 ```
@@ -130,11 +130,13 @@ control is not title, completeness rests on the holder's representation).
 * Period: the instants asked for and the two blocks they resolved to.
 * Summary: opening and closing balance, received, sent, fees, net, the
   reconciliation, the proof coverage, the node cross-check.
-* Opening and closing coins, the latter each with its proof of control:
-  verdict, message, stamp block and the signature itself. A proof is per
-  address, so one made before the output existed (a change address proven
-  before the spend) covers it; the report says when that is the case.
-* The distinct messages signed, each with its stamp block, verdict and file.
+* Holdings at the start and at the end of the period, per address. Each
+  closing address carries its proof of control in the shape the verifier
+  takes it: the address, the message signed (its last line is the block
+  stamp that dates it), the proof, and the verdict with the engines that
+  passed. A proof is per address, so one made before the coins arrived (a
+  change address proven before the spend) covers them; the statement says
+  when that is the case. Outputs stay in `report.json`.
 * Every movement: time, txid, kind (receive, send, internal), net, fee, the
   running balance, and for a payment the address paid.
 * How to verify all of it independently.

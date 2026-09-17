@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.3.3 (2026-09-17)
+
+- Holdings at the end of the period are stated per address, each with the
+  three inputs of the verification (address, message with its block stamp,
+  proof) and the verdict; the separate messages section is gone and outputs
+  no longer appear in the statement (they stay in `report.json`). Five
+  sections. Each proof names the verifier and the engines that passed.
+
 ## 0.3.2 (2026-09-17)
 
 - Times instead of block numbers wherever the reader is not verifying

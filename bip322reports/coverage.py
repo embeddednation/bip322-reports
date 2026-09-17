@@ -45,12 +45,17 @@ class Bundle:
         return bool(self.report and self.report.get("ok"))
 
     def proof_state(self, address: str) -> str:
+        verdict = self.verdict(address)
+        return verdict["state"] if verdict else ("not verified" if not self.report else "missing")
+
+    def verdict(self, address: str) -> dict | None:
+        """The verifier's own record for one address: state, tool, engines."""
         if not self.report:
-            return "not verified"
+            return None
         for row in self.report["proofs"]:
             if row["address"] == address:
-                return row["bip322"]["state"]
-        return "missing"
+                return row["bip322"]
+        return None
 
     def to_dict(self) -> dict:
         s = (self.report or {}).get("summary") or {}
@@ -92,6 +97,7 @@ class Cover:
         return self.coin_height is not None and int(self.bundle.stamp["height"]) < self.coin_height
 
     def to_dict(self) -> dict:
+        verdict = self.bundle.verdict(self.address) or {}
         return {
             "bundle": self.bundle.name,
             "message": self.bundle.message,
@@ -101,9 +107,24 @@ class Cover:
             "variant": self.variant,
             "state": self.state,
             "verified": self.verified,
+            "verifier": verdict.get("tool"),
+            "engines": _engine_names(verdict.get("engines", [])),
             "lists_output": self.lists_output,
             "before_output": self.before_output,
         }
+
+
+def _engine_names(runs) -> list[str]:
+    """The script engines that passed, by their public names, once each (the verifier runs btclib with two rule sets)."""
+    names = {"btclib": "btclib", "kernel": "libbitcoinkernel"}
+    out: list[str] = []
+    for run in runs:
+        if not isinstance(run, dict) or not run.get("ok"):
+            continue
+        name = names.get(str(run.get("engine", "")).split("-")[0], str(run.get("engine")))
+        if name not in out:
+            out.append(name)
+    return out
 
 
 def load_ledger(cli: BitcoinCli | None, roots, *, engines=None, progress=None) -> list[Bundle]:

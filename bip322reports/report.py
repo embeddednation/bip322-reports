@@ -63,11 +63,11 @@ def build_report(
             covered_sat += coin.amount_sat
             used[best.bundle.name] = used.get(best.bundle.name, 0) + 1
         closing_rows.append(row)
-    labels = {b.name: _label(i) for i, b in enumerate(bundles)}  # A, B, C ... in stamp order: how the statement refers to a message
     for row in closing_rows:
         if row["proof"]:
             row["proof"]["after_period"] = int(row["proof"]["stamp"]["height"]) > period.end.height
-            row["proof"]["message_label"] = labels[row["proof"]["bundle"]]
+    closing_addresses = _by_address(closing_rows)
+    opening_addresses = _by_address([{**c.to_dict(), "created_utc": created.get(c.txid)} for c in opening])
     uncovered = [r for r in closing_rows if not (r["proof"] and r["proof"]["verified"])]
     after_period = sum(1 for r in closing_rows if r["proof"] and r["proof"]["verified"] and r["proof"]["after_period"])
 
@@ -109,8 +109,15 @@ def build_report(
             "total_sat": opening_sat,
             "total_btc": btc(opening_sat),
             "coins": [{**c.to_dict(), "created_utc": created.get(c.txid)} for c in opening],
+            "addresses": opening_addresses,
         },
-        "closing": {"height": period.end.height, "total_sat": closing_sat, "total_btc": btc(closing_sat), "coins": closing_rows},
+        "closing": {
+            "height": period.end.height,
+            "total_sat": closing_sat,
+            "total_btc": btc(closing_sat),
+            "coins": closing_rows,
+            "addresses": closing_addresses,
+        },
         "transactions": tx_rows,
         "totals": {
             "received_sat": received,
@@ -137,18 +144,17 @@ def build_report(
             "uncovered_btc": btc(closing_sat - covered_sat),
             "covered_count": len(closing_rows) - len(uncovered),
             "covered_after_period_count": after_period,
+            "addresses_total": len(closing_addresses),
+            "addresses_covered": sum(1 for a in closing_addresses if a["proof"] and a["proof"]["verified"]),
+            "addresses_after_period": sum(
+                1 for a in closing_addresses if a["proof"] and a["proof"]["verified"] and a["proof"]["after_period"]
+            ),
             "total_count": len(closing_rows),
             "complete": not uncovered,
             "uncovered": [{k: r[k] for k in ("txid", "vout", "address", "amount_sat", "amount_btc")} for r in uncovered],
         },
         "bundles": [
-            {
-                **b.to_dict(),
-                "label": labels[b.name],
-                "after_period": int(b.stamp["height"]) > period.end.height,
-                "used_for": used.get(b.name, 0),
-            }
-            for b in bundles
+            {**b.to_dict(), "after_period": int(b.stamp["height"]) > period.end.height, "used_for": used.get(b.name, 0)} for b in bundles
         ],
         "policy": _single({b.document.get("policy") for b in bundles} - {None}),
         "pending_bundles": [_relative_dir(p, ledger_roots) for p in pending_bundles(ledger_roots)] if ledger_roots else [],
@@ -162,13 +168,24 @@ def build_report(
     return report
 
 
-def _label(index: int) -> str:
-    """A, B, ... Z, AA, AB, ..."""
-    out = ""
-    index += 1
-    while index:
-        index, rem = divmod(index - 1, 26)
-        out = chr(65 + rem) + out
+def _by_address(rows: list[dict]) -> list[dict]:
+    """Coins grouped per address, in order of first appearance: the statement's unit, since proofs are per address."""
+    groups: dict[str, dict] = {}
+    for row in rows:
+        g = groups.setdefault(row["address"], {"address": row["address"], "total_sat": 0, "outputs": [], "proof": row.get("proof")})
+        g["total_sat"] += row["amount_sat"]
+        g["outputs"].append({k: row[k] for k in ("txid", "vout", "amount_sat", "amount_btc", "height", "created_utc")})
+    out = []
+    for g in groups.values():
+        g["total_btc"] = btc(g["total_sat"])
+        times = sorted(o["created_utc"] for o in g["outputs"] if o["created_utc"])
+        g["received_first"], g["received_last"] = (times[0], times[-1]) if times else (None, None)
+        if g["proof"]:
+            stamp = int(g["proof"]["stamp"]["height"])
+            heights = [o["height"] for o in g["outputs"] if o["height"] is not None]
+            before = "all" if heights and stamp < min(heights) else ("some" if heights and stamp < max(heights) else None)
+            g["proof"] = {**g["proof"], "before_coins": before}
+        out.append(g)
     return out
 
 
