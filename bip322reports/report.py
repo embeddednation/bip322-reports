@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import contextlib
 import hashlib
 import json
 import shlex
@@ -10,8 +11,9 @@ from pathlib import Path
 
 from bip322audit.holdings import format_holdings, holdings, holdings_command
 from bip322audit.rpc import BitcoinCli, RpcError, btc
-from bip322core.cli import decode_signature_report, format_decode_text, format_verify_text
+from bip322core.cli import format_address_text, format_verify_text
 from bip322core.core import BIP322Error
+from bip322core.verify import describe_address
 
 from . import TOOL
 from .coverage import cover_coins, load_ledger, pending_bundles
@@ -73,12 +75,11 @@ def build_report(
             row["proof"]["after_period"] = int(row["proof"]["stamp"]["height"]) > period.end.height
     closing_addresses = _by_address(closing_rows)
     opening_addresses = _by_address([{**c.to_dict(), "created_utc": created.get(c.txid)} for c in opening])
-    network = {"main": "main", "test": "test", "regtest": "regtest", "signet": "signet"}.get(history.chain, "main")
     for a in closing_addresses:
         if a["proof"]:
             a["proof"]["command"] = shell_command(["bip322", "verifymessage", a["address"], a["proof"]["signature"], a["proof"]["message"]])
             a["proof"]["output"] = format_verify_text(a["proof"]["verdict"]) if a["proof"].get("verdict") else "(not verified)"
-            a["proof"]["script"] = _script_step(a["address"], a["proof"]["signature"], network)
+        a["script"] = _address_step(a["address"])
     onchain_result = _onchain(cli, closing_rows, period, progress) if cli is not None and onchain and closing_rows else None
     uncovered = [r for r in closing_rows if not (r["proof"] and r["proof"]["verified"])]
     after_period = sum(1 for r in closing_rows if r["proof"] and r["proof"]["verified"] and r["proof"]["after_period"])
@@ -252,30 +253,18 @@ def shell_command(argv: list[str]) -> str:
     return "\n".join(lines + body)
 
 
-def _script_step(address: str, signature: str, network: str) -> dict:
-    """The derivation from the proof to the lock it satisfies: witness script (or key) -> hash -> scriptPubKey -> address.
+def _address_step(address: str) -> dict:
+    """The address opened into its scriptPubKey: the script the proof is for and the outputs are locked to.
 
-    ``decodesignature --text`` prints it; the statement quotes it.  ``matches``
-    says the scriptPubKey the proof names is this address's, which is what
-    ties the proof of control to the outputs locked to the address.
+    ``bip322 validateaddress`` prints it; the statement quotes it and compares
+    the bytes with what the node reports for each output.
     """
-    argv = ["bip322", "decodesignature", signature, "--text"] + (["--network", network] if network != "main" else [])
+    argv = ["bip322", "validateaddress", address]
     try:
-        decoded = decode_signature_report(signature, network)
+        info = describe_address(address)
     except (BIP322Error, ValueError) as exc:
-        return {"command": shell_words(argv), "output": f"(cannot decode: {exc})", "script_pubkey": None, "matches": False}
-    items = decoded.get("witness") or (decoded.get("to_sign", {}).get("inputs") or [{}])[0].get("witness", [])
-    named = [
-        (e.get("p2wsh_scriptPubKey") or e.get("p2wpkh_scriptPubKey"), e.get("p2wsh_address") or e.get("p2wpkh_address")) for e in items
-    ]
-    named = [(spk, addr) for spk, addr in named if spk]
-    script_pubkey, derived_address = named[-1] if named else (None, None)
-    return {
-        "command": shell_words(argv),
-        "output": format_decode_text(decoded),
-        "script_pubkey": script_pubkey,
-        "matches": derived_address == address,
-    }
+        return {"command": shell_words(argv), "output": f"(cannot decode: {exc})", "script_pubkey": None, "type": None}
+    return {"command": shell_words(argv), "output": format_address_text(info), "script_pubkey": info["scriptPubKey"], "type": info["type"]}
 
 
 def _onchain(cli: BitcoinCli, closing_rows: list[dict], period: Period, progress=None) -> dict:
@@ -302,11 +291,20 @@ def _onchain(cli: BitcoinCli, closing_rows: list[dict], period: Period, progress
         counts["not_run"] = len(closing_rows)
         return {"error": str(exc), **counts, "outputs": len(closing_rows)}
     found = {(o["txid"], o["vout"]): o for o in result["outputs"]}
+    expected_script = {}
+    for r in closing_rows:
+        with contextlib.suppress(BIP322Error, ValueError):
+            expected_script[r["address"]] = describe_address(r["address"])["scriptPubKey"]
     for r in closing_rows:
         o = found[(r["txid"], r["vout"])]
         if not o["unspent"]:
             status = "spent_since"
-        elif o["counted"] and o["amount_sat"] == r["amount_sat"] and o["address"] == r["address"]:
+        elif (
+            o["counted"]
+            and o["amount_sat"] == r["amount_sat"]
+            and o["address"] == r["address"]
+            and (not o.get("script") or o["script"] == expected_script.get(r["address"], o["script"]))
+        ):
             status = "matches"
         else:
             status = "contradicted"

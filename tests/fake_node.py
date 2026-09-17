@@ -8,6 +8,7 @@ without a bitcoind.
 from __future__ import annotations
 
 from bip322audit.rpc import BitcoinCli, RpcError, btc
+from embit.script import address_to_scriptpubkey
 
 T0 = 1_700_000_000  # block 0: 2023-11-14T22:13:20Z
 SPACING = 600
@@ -130,8 +131,6 @@ class FakeNode(BitcoinCli):
                 if self.tip_height - h + 1 >= minconf
             ]
         if method == "scantxoutset":
-            from embit.script import address_to_scriptpubkey
-
             objects = params[1] if len(params) > 1 else []
             wanted = [o["desc"][5:-1] for o in objects if str(o.get("desc", "")).startswith("addr(")]
             unspents = []
@@ -153,7 +152,11 @@ class FakeNode(BitcoinCli):
             txid, vout = params[0], int(params[1])
             for t, n, a, sat, h in self.unspent(mine_only=False):
                 if (t, n) == (txid, vout):
-                    return {"value": btc(sat), "confirmations": self.tip_height - h + 1, "scriptPubKey": {"address": a}}
+                    return {
+                        "value": btc(sat),
+                        "confirmations": self.tip_height - h + 1,
+                        "scriptPubKey": {"address": a, "hex": address_to_scriptpubkey(a).data.hex()},
+                    }
             return None
         if method == "getrawtransaction":
             txid = params[0]

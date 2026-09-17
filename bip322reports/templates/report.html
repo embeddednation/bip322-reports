@@ -119,7 +119,7 @@
       <td class="num">{% if r.period.to_tip %}not applicable: the period runs to the tip{% else %}{{ r.coverage.addresses_after_period }} of {{ r.coverage.addresses_total }} addresses{% endif %}</td></tr>
   {% if r.onchain %}
   <tr><td>{% if r.onchain.error %}<span class="muted">–</span>{% elif r.onchain.contradicted %}{{ yesno(false) }}{% elif r.onchain.spent_since %}<span class="muted">–</span>{% else %}{{ yesno(true) }}{% endif %}</td>
-      <td>On chain: each closing output is locked to the address stated, with the amount stated, and was held at the closing block (section 4)</td>
+      <td>On chain: each closing output is locked to the scriptPubKey of the address stated, with the amount stated, and was held at the closing block (section 4)</td>
       <td class="num">{% if r.onchain.error %}not run{% else %}{{ r.onchain.matches }} of {{ r.onchain.outputs }} outputs{% if r.onchain.spent_since %} · {{ r.onchain.spent_since }} spent since{% endif %}{% if r.onchain.contradicted %} · {{ r.onchain.contradicted }} contradicted{% endif %}{% endif %}</td></tr>
   {% endif %}
   {% if r.node_check %}
@@ -164,17 +164,18 @@
 {% else %}<p class="muted">No transactions in the period; the closing balance equals the opening balance.</p>{% endif %}
 
 <h2>3. Holdings at the end of the period · {{ r.period.end.time_utc | utc }}</h2>
+<p class="small muted">Coins exist on the chain as unspent outputs: each is a fixed amount locked to one script, the scriptPubKey, until it is spent. An address is a scriptPubKey, checksummed and encoded. The wallet's outputs at the end of the period, with the address each is locked to:</p>
 <table>
-  <colgroup><col><col style="width:12%"><col class="w-btc"></colgroup>
-  <thead><tr><th>Address</th><th>Control</th><th class="num">Amount</th></tr></thead>
+  <colgroup><col style="width:42%"><col><col style="width:11%"><col class="w-btc"></colgroup>
+  <thead><tr><th>Output</th><th>Locked to</th><th>Control</th><th class="num">Amount</th></tr></thead>
   <tbody>
-  {% for a in r.closing.addresses %}
-  <tr><td>{{ addr(a.address) }}</td><td>{% if a.proof and a.proof.verified %}<span class="ok">proven</span>{% elif a.proof %}<span class="bad">{{ a.proof.state }}</span>{% else %}<span class="bad">no proof</span>{% endif %}</td><td class="num">{{ a.total_btc }}</td></tr>
-  {% endfor %}
-  <tr class="total"><td colspan="2">Closing balance · {{ r.coverage.covered_btc }} with proof of control</td><td class="num">{{ r.closing.total_btc }}</td></tr>
+  {% for a in r.closing.addresses %}{% for o in a.outputs %}
+  <tr><td><span class="mono">{{ tx(o.txid) }}:{{ o.vout }}</span></td><td>{{ addr(a.address) }}</td><td>{% if a.proof and a.proof.verified %}<span class="ok">proven</span>{% elif a.proof %}<span class="bad">{{ a.proof.state }}</span>{% else %}<span class="bad">no proof</span>{% endif %}</td><td class="num">{{ o.amount_btc }}</td></tr>
+  {% endfor %}{% endfor %}
+  <tr class="total"><td colspan="3">Closing balance · {{ r.coverage.covered_btc }} with proof of control</td><td class="num">{{ r.closing.total_btc }}</td></tr>
   </tbody>
 </table>
-<p class="small muted">One page per address follows. Coins exist on the chain as outputs: a fixed amount locked to one script, the scriptPubKey, until it is spent. An address is a scriptPubKey, checksummed and encoded. A BIP-322 proof carries the script and shows that the holder can satisfy it; the node shows which scriptPubKey each output is locked to. Together they show control of the coins.</p>
+<p class="small muted">One page per address follows. Each opens the address into its scriptPubKey, shows the proof that the holder controls that script, and shows on the chain that the output is locked to those same bytes.</p>
 {% if r.coverage.uncovered %}
 <p class="bad">Addresses without a verified proof hold {{ r.coverage.uncovered_btc }}.</p>
 {% endif %}
@@ -188,20 +189,26 @@
 {% for a in r.closing.addresses %}
 <div class="page">
 <h2>4.{{ loop.index }} {{ a.address }}</h2>
-<p class="small muted">Holds {{ a.total_btc }} in {{ a.outputs | length }} output{% if a.outputs | length != 1 %}s{% endif %} at the end of the period. What is proven is control of a scriptPubKey, the script that locks coins; the address is that script, checksummed and encoded. The proof carries the script and the signatures that satisfy it: <em>script</em> derives the scriptPubKey from it, <em>verify</em> checks the signatures against it for the message, and <em>on chain</em> shows each output locked to that same scriptPubKey.</p>
-<h3>Proof of control</h3>
+<p class="small muted">{% if a.outputs | length == 1 %}One output of {{ a.total_btc }}{% else %}{{ a.outputs | length }} outputs, {{ a.total_btc }} in all,{% endif %} locked to this address at the end of the period. Three steps: the address opened into its scriptPubKey; the proof that the holder controls that script, verified; and the output on the chain, locked to the same scriptPubKey.</p>
+<h3>Address and scriptPubKey</h3>
 <table class="coins">
   <colgroup><col style="width:11%"><col></colgroup>
   <tbody>
   <tr class="lead"><td class="k">address</td><td class="addr">{{ addr(a.address) }}</td></tr>
-  {% if a.proof %}
-  <tr><td class="k">message</td><td><code class="msg">{{ a.proof.message }}</code></td></tr>
-  <tr><td class="k">proof</td><td><span class="mono">{{ a.proof.signature | breakable }}</span></td></tr>
-  <tr><td class="k">script</td><td>
-    <pre class="cmd">$ {{ a.proof.script.command }}</pre>
-    <pre class="out">{{ a.proof.script.output }}</pre>
-    {% if a.proof.script.matches %}<span class="badge ok">THIS ADDRESS</span> <span class="small muted">the scriptPubKey the proof's script hashes to is the address above</span>{% else %}<span class="badge bad">DOES NOT MATCH</span> <span class="small muted">the proof names another scriptPubKey</span>{% endif %}
+  <tr class="last"><td class="k">script</td><td>
+    <pre class="cmd">$ {{ a.script.command }}</pre>
+    <pre class="out">{{ a.script.output }}</pre>
+    {% if a.script.script_pubkey %}<span class="small muted">Everything below is about these bytes: the proof is made for them and the output is locked to them.</span>{% endif %}
   </td></tr>
+  </tbody>
+</table>
+<h3>Proof of control</h3>
+<table class="coins">
+  <colgroup><col style="width:11%"><col></colgroup>
+  <tbody>
+  {% if a.proof %}
+  <tr class="lead"><td class="k">message</td><td><code class="msg">{{ a.proof.message }}</code></td></tr>
+  <tr><td class="k">proof</td><td><span class="mono">{{ a.proof.signature | breakable }}</span></td></tr>
   <tr class="last"><td class="k">verify</td><td>
     <pre class="cmd">$ {{ a.proof.command }}</pre>
     <pre class="out">{{ a.proof.output }}</pre>
@@ -209,11 +216,11 @@
     <span class="small muted">{{ a.proof.verifier }}{% if a.proof.after_period %} · proof made after the period's end{% endif %}{% if a.proof.before_coins == "all" %} · proof made before these coins were received{% elif a.proof.before_coins == "some" %} · proof made before some of these coins were received{% endif %}</span>
   </td></tr>
   {% else %}
-  <tr class="last"><td class="k">verify</td><td><span class="badge bad">NO PROOF</span></td></tr>
+  <tr class="lead last"><td class="k">verify</td><td><span class="badge bad">NO PROOF</span></td></tr>
   {% endif %}
   </tbody>
 </table>
-<h3>Outputs locked to this scriptPubKey</h3>
+<h3>On the chain</h3>
 <table class="coins">
   <colgroup><col style="width:11%"><col></colgroup>
   {% for o in a.outputs %}
@@ -221,11 +228,11 @@
   <tr class="lead"><td class="k">output</td><td class="addr"><span class="mono">{{ tx(o.txid) }}:{{ o.vout }}</span></td></tr>
   <tr><td class="k">amount</td><td class="amt">{{ o.amount_btc }}</td></tr>
   <tr><td class="k">received</td><td>{{ o.created_utc | utc }}</td></tr>
-  <tr class="last"><td class="k">on chain</td><td>
+  <tr class="last"><td class="k">lookup</td><td>
     {% if o.onchain %}
     <pre class="cmd">$ {{ o.onchain.command }}</pre>
     <pre class="out">{{ o.onchain.output }}</pre>
-    {% if o.onchain.status == "matches" %}<span class="badge ok">HELD</span> <span class="small muted">at the closing block, locked to this scriptPubKey, with the amount stated</span>
+    {% if o.onchain.status == "matches" %}<span class="badge ok">HELD</span> <span class="small muted">at the closing block; locked to the scriptPubKey above, with the amount stated</span>
     {% elif o.onchain.status == "spent_since" %}<span class="badge">SPENT SINCE</span> <span class="small muted">not in the UTXO set any more; the spending transaction is in report.json</span>
     {% elif o.onchain.status == "contradicted" %}<span class="badge bad">CONTRADICTED</span> <span class="small muted">the chain disagrees with the statement</span>
     {% else %}<span class="badge">NOT RUN</span>{% endif %}
@@ -236,9 +243,6 @@
   </td></tr>
   </tbody>
   {% endfor %}
-  <tbody>
-  <tr class="total"><td colspan="2">Held at this address at the end of the period: {{ a.total_btc }}</td></tr>
-  </tbody>
 </table>
 </div>
 {% endfor %}
@@ -248,7 +252,7 @@
   <li><strong>Point in time.</strong> Holdings are stated as of {{ r.period.end.time_utc | utc }} (block {{ r.period.end.height }}); nothing here says what the wallet holds after that.</li>
   <li><strong>Control, not title.</strong> A proof shows that the keys behind an address signed the message. It does not show who owns the coins, whether they are pledged, lent or otherwise encumbered, or what liabilities stand against them.</li>
   <li><strong>Completeness.</strong> The movements and holdings are those of this wallet as known to the holder's node. That the wallet is the holder's only one, or that all of its addresses are in the node, rests on the holder's representation; no cryptographic check establishes it.</li>
-  <li><strong>Scripts, addresses and outputs.</strong> A BIP-322 proof is about a scriptPubKey, the script that locks coins; the address is that script encoded. It is not about any particular coin. Coins are outputs, each locked to exactly one scriptPubKey, which the node reports. Section 4 derives the scriptPubKey from the script inside each proof and shows each output locked to it; control of the script is therefore control of the outputs. A script proven once is covered for every coin paid to it, before or after the proof; the date of each proof is the block named in its message.</li>
+  <li><strong>Scripts, addresses and outputs.</strong> A BIP-322 proof is made for a scriptPubKey, the script that locks coins; an address is that script, checksummed and encoded. The proof is not about any particular coin. Coins are outputs, each locked to exactly one scriptPubKey, which the node reports. Each page of section 4 opens the address into its scriptPubKey and shows the output locked to those bytes; control of the script is therefore control of the output. A script proven once is covered for every coin paid to it, before or after the proof; the date of each proof is the block named in its message.</li>
   <li><strong>No wallet structure is disclosed.</strong> The statement and the bundles name addresses and outputs only; they carry no descriptor, extended public key or derivation path.</li>
   {% if r.fiat %}<li><strong>Fiat values</strong> are informational, from rates the holder supplied ({{ r.fiat.source }}), at the rate in force on each transaction's day.</li>{% endif %}
 </ul>
@@ -256,8 +260,9 @@
 <h2>6. Verification procedures</h2>
 <p class="small muted">Every figure and proof above is checkable on any Bitcoin node with the chain, without a wallet or an index.</p>
 <ol class="small">
-  <li><strong>Proof of control, per address.</strong> Run the <em>script</em> command printed on the address's page in section 4: the scriptPubKey and address it prints must be the page's. Then run the <em>verify</em> command; it prints what is printed here, starting with VALID. Paste it as it stands: the backslashes continue the command across lines, and the message keeps its own line break inside the quotes. For a second opinion, <code>bip322-refcheck ADDRESS PROOF MESSAGE</code> runs independent implementations beside it, and <code>bitcoin-cli getblockheader HASH</code> with the hash from the message's last line confirms the block's height and time.</li>
-  <li><strong>Holdings, per output.</strong> Run the <em>on chain</em> command printed under each output on the address's page (a direct lookup, instant). Its "locked to" line must be the page's address. An output spent after the period's end no longer shows; <code>report.json</code> names the transaction that spent it. The same by address, <code>bip322 audit holdings ADDRESS --at BLOCK</code>, scans the whole UTXO set and takes minutes on a mainnet node.</li>
+  <li><strong>Address and scriptPubKey.</strong> Run the <em>script</em> command printed on the address's page in section 4, or <code>bitcoin-cli validateaddress ADDRESS</code> on any node: both print the scriptPubKey the address stands for. To look inside a proof, <code>bip322 decodesignature PROOF --text</code> shows the witness script it carries and derives the same scriptPubKey from it.</li>
+  <li><strong>Proof of control, per address.</strong> Run the <em>verify</em> command printed on the page; it prints what is printed here, starting with VALID. Paste it as it stands: the backslashes continue the command across lines, and the message keeps its own line break inside the quotes. For a second opinion, <code>bip322-refcheck ADDRESS PROOF MESSAGE</code> runs independent implementations beside it, and <code>bitcoin-cli getblockheader HASH</code> with the hash from the message's last line confirms the block's height and time.</li>
+  <li><strong>Holdings, per output.</strong> Run the <em>lookup</em> command printed under each output on the address's page (a direct lookup, instant). Its "script" line must be the page's scriptPubKey. An output spent after the period's end no longer shows; <code>report.json</code> names the transaction that spent it. The same by address, <code>bip322 audit holdings ADDRESS --at BLOCK</code>, scans the whole UTXO set and takes minutes on a mainnet node.</li>
   <li><strong>Movements.</strong> Each transaction in section 2 by txid; the running balance follows from the opening balance and the net of each.</li>
   <li><strong>All of it at once.</strong> The proofs come as files next to this statement{% if r.bundles %}: {% for b in r.bundles %}<code>ledger/{{ b.bundle }}</code>{% if not loop.last %}, {% endif %}{% endfor %}{% endif %}. <code>bip322-audit verify FILE</code> checks every proof in a file, its stamp block, and that every output the file lists existed at that block. <code>report.json</code> carries every figure of this statement and its reference {{ r.report_id }}. Both tools install with <code>pip install bip322-reports</code>.</li>
 </ol>

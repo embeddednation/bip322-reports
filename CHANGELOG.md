@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.4.4 (2026-09-17)
+
+- Section 3 lists the unspent outputs with the address each is locked to.
+  Each address page is three steps: the address opened into its
+  scriptPubKey (`bip322 validateaddress`), the proof of control verified,
+  and the output looked up on the chain, locked to the same bytes. The
+  `decodesignature` derivation is out of the page and into the procedures.
+- Requires bip322-core 0.8.1 and bip322-audit 0.9.5.
+
 ## 0.4.3 (2026-09-17)
 
 - Each address page has a *script* step: `bip322 decodesignature --text`
