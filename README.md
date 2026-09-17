@@ -15,10 +15,23 @@ A report answers, for a wallet and a period:
 
 Two ways of working with it, the same tool for both:
 
-* **Continuously, for yourself.** Whenever coins move, prove only the outputs no earlier bundle proves (`bip322-audit snapshot --skip-proven LEDGER`, sign, finalize). A report can then be produced at any time, with every coin backed by your own signed message.
+* **Continuously, for yourself.** Before broadcasting a spend, prove its change address (`bip322-audit prove ADDRESS --ledger LEDGER`, sign, finalize): a valid proof means the quorum controls where the change goes, and the output that lands there later is covered by it. New deposit addresses the same way, or with `snapshot --skip-proven LEDGER` after the fact. A report can then be produced at any time, with every coin backed by your own signed message.
 * **On demand, for an auditor.** Take one bundle over every output with the auditor's own message, and produce the report for the year. The auditor verifies the bundles and the report on their own node with `bip322-audit verify` and `bitcoin-cli`.
 
 ## Install
+
+One line, into a fresh venv; bip322-audit and bip322-core come along at their
+pinned tags, and the three commands land in the venv's `bin`:
+
+```sh
+python3 -m venv ~/.bip322 && ~/.bip322/bin/pip install "bip322-reports[kernel] @ git+ssh://git@github.com/embeddednation/bip322-reports.git@v0.2.0"
+export PATH="$HOME/.bip322/bin:$PATH"
+bip322 engines && bip322-audit help && bip322-reports help
+```
+
+Leave out `[kernel]` on anything but CPython 3.12 / Linux x86_64 (btclib
+remains as the verifier). For a reproducible, hash-pinned install, clone and
+use the setup script:
 
 ```sh
 git clone git@github.com:embeddednation/bip322-reports.git && cd bip322-reports
@@ -46,10 +59,13 @@ plus `report.json` and `transactions.csv`; `--pdf` then says what is missing.
 ## The flow
 
 ```sh
-# a ledger: any directory where the bip322-audit bundles accumulate
-bip322-audit -w treasury snapshot --text "Proof of control {date}" --skip-proven ledger
+# a ledger: any directory where the bip322-audit bundles accumulate.
+# before broadcasting a spend: prove its change address
+bip322-audit -w treasury prove bc1q...change... --text "Proof of control {date}" --ledger ledger
 #   sign to_sign/*.psbt on the cosigners' devices, put the results in signed/, then
-bip322-audit finalize ledger/snapshot-<date>-<height>
+bip322-audit finalize ledger/snapshot-<date>-<height>     # valid -> broadcast
+# anything that arrived on addresses not yet proven (deposits):
+bip322-audit -w treasury snapshot --text "Proof of control {date}" --skip-proven ledger
 
 # the year's report
 bip322-reports -w treasury report --year 2026 --ledger ledger
@@ -106,7 +122,9 @@ bip322-reports help [COMMAND]
 * Summary: opening and closing balance, received, sent, fees, net, the
   reconciliation, the proof coverage, the node cross-check.
 * Opening and closing coins, the latter each with its proof: bundle, stamp
-  block, message, verdict, and the signature in the appendix.
+  block, message, verdict, and the signature in the appendix. A proof is per
+  address, so one made before the output existed (a change address proven
+  before the spend) covers it; the report says when that is the case.
 * Every movement: time, block, txid, kind (receive, send, internal), net, fee,
   and the wallet's side of it (outputs spent from the wallet, outputs to the
   wallet, outputs to outside).

@@ -9,7 +9,7 @@ from pathlib import Path
 
 import pytest
 from bip322audit.audit import finalize_bundle
-from bip322audit.ledger import proven_outpoints
+from bip322audit.ledger import proven_addresses
 from bip322audit.rpc import BitcoinCli
 from bip322audit.snapshot import take_snapshot, write_bundle
 from bip322core.dev.signing import sign_psbt
@@ -86,8 +86,8 @@ def private_descriptors(masters):
     return out
 
 
-def _bundle(directory: Path, watch: BitcoinCli, wallet: Wallet, signers, template: str, skip=None) -> dict:
-    snapshot, psbts = take_snapshot(watch, wallet, template, depth=1, skip_outpoints=skip)
+def _bundle(directory: Path, watch: BitcoinCli, wallet: Wallet, signers, template: str, skip=None, addresses=None) -> dict:
+    snapshot, psbts = take_snapshot(watch, wallet, template, depth=1, skip_addresses=skip, addresses=addresses)
     write_bundle(directory, snapshot, psbts)
     for entry in snapshot.addresses:
         psbt = parse_psbt((directory / entry["file"]).read_text())
@@ -119,22 +119,19 @@ def test_reports_workflow_on_regtest(core, regtest_wallet, signer_expressions, p
     first = _bundle(ledger / "snapshot-first", watch, regtest_wallet, signer_expressions, "Owner proof {date}")
     assert len(first["proofs"]) == 2 and first["total_sat"] == 60_000_000
 
-    # ---- a spend: 0.2 out, change back to the wallet; then prove only the change #
-    funded = watch.call(
-        "walletcreatefundedpsbt",
-        [],
-        [{mine_to: 0.2}],
-        0,
-        {"subtractFeeFromOutputs": [0], "changeAddress": regtest_wallet.derive(5, 1).address},
-    )
+    # ---- a spend: 0.2 out, change back to the wallet. The change address is proven BEFORE broadcasting --- #
+    change = regtest_wallet.derive(5, 1).address
+    funded = watch.call("walletcreatefundedpsbt", [], [{mine_to: 0.2}], 0, {"subtractFeeFromOutputs": [0], "changeAddress": change})
+    decoded = node.call("decodepsbt", funded["psbt"])
+    assert change in [o["scriptPubKey"]["address"] for o in decoded["tx"]["vout"]]
+    second = _bundle(ledger / "snapshot-change", watch, regtest_wallet, signer_expressions, "Owner proof {date}", addresses=[change])
+    assert second["proofs"][0]["address"] == change and second["proofs"][0]["utxos"] == []
     signed = node.call("descriptorprocesspsbt", funded["psbt"], private_descriptors)
     assert signed["complete"]
     spend_txid = node.call("sendrawtransaction", signed["hex"])
     miner.call("generatetoaddress", 2, mine_to)  # spend at 104, tip 105
-    second = _bundle(
-        ledger / "snapshot-change", watch, regtest_wallet, signer_expressions, "Owner proof {date}", skip=proven_outpoints([ledger])
-    )
-    assert len(second["proofs"]) == 1 and all(u["txid"] == spend_txid for p in second["proofs"] for u in p["utxos"])
+    with pytest.raises(Exception, match="already proven"):  # nothing left to prove: the change address is covered
+        take_snapshot(watch, regtest_wallet, "x", depth=1, skip_addresses=proven_addresses([ledger]))
 
     # ---- the report over the whole life of the wallet -------------------------- #
     history = fetch_history(watch)
@@ -155,6 +152,8 @@ def test_reports_workflow_on_regtest(core, regtest_wallet, signer_expressions, p
     assert report["coverage"]["complete"] and report["coverage"]["total_count"] == 2
     used = {b["bundle"].split("/")[0]: b["used_for"] for b in report["bundles"]}
     assert used == {"snapshot-first": 1, "snapshot-change": 1} and all(b["verified"] for b in report["bundles"])
+    change_row = next(c for c in report["closing"]["coins"] if c["address"] == change)
+    assert change_row["proof"]["before_output"] and not change_row["proof"]["lists_output"]
     assert report["node_check"]["ok"] and report["reconciliation"]["ok"]
     html = render_html(report)
     assert "complete" in html and spend_txid in html

@@ -56,9 +56,14 @@ step "3. the owner proves everything once (the first bundle in the ledger)"
 run $AUDIT --cli "$CLI" -w watch snapshot --depth 1 --text "Proof of control {date}" -o "$LEDGER/snapshot-first"
 sign_bundle "$LEDGER/snapshot-first"
 
-step "4. a payment leaves the wallet; the change is a new output"
+step "4. a payment is prepared; before broadcasting, the change address is proven (a bundle joins the ledger)"
 CHANGE=$(.venv/bin/bip322 -w "$WORK/wallet.desc" --network regtest deriveaddresses 5 --change)
 FUNDED=$($CLI -rpcwallet=watch walletcreatefundedpsbt '[]' "[{\"$MINE\":0.2}]" 0 "{\"subtractFeeFromOutputs\":[0],\"changeAddress\":\"$CHANGE\"}" | .venv/bin/python -c "import json,sys;print(json.load(sys.stdin)['psbt'])")
+$CLI decodepsbt "$FUNDED" | .venv/bin/python -c "import json,sys;[print('output', o['value'], o['scriptPubKey']['address']) for o in json.load(sys.stdin)['tx']['vout']]"
+run $AUDIT --cli "$CLI" -w watch prove "$CHANGE" --depth 1 --text "Proof of control {date}" --ledger "$LEDGER"
+sign_bundle "$(ls -td "$LEDGER"/snapshot-*/ | head -1)"
+
+step "5. the proof of the change address is valid: broadcast"
 PRIV=$(.venv/bin/python - "$WORK" <<'PY'
 import json, sys
 from pathlib import Path
@@ -72,10 +77,8 @@ PY
 )
 SIGNED=$($CLI descriptorprocesspsbt "$FUNDED" "$PRIV" | .venv/bin/python -c "import json,sys;d=json.load(sys.stdin);assert d['complete'];print(d['hex'])")
 $CLI sendrawtransaction "$SIGNED" >/dev/null; $CLI -rpcwallet=miner generatetoaddress 2 "$MINE" >/dev/null
-
-step "5. prove only what no earlier bundle proves: the change (a second bundle joins the ledger)"
-run $AUDIT --cli "$CLI" -w watch snapshot --depth 1 --text "Proof of control {date}" --skip-proven "$LEDGER"
-sign_bundle "$(ls -d "$LEDGER"/snapshot-*/ | grep -v first | head -1)"
+echo "nothing left to prove after the spend, because the change address already is:"
+$AUDIT --cli "$CLI" -w watch snapshot --depth 1 --skip-proven "$LEDGER" 2>&1 | tail -1 || true
 
 step "6. the year's balance report: opening and closing balances, movements, every closing coin backed by a verified proof"
 run $REPORTS --cli "$CLI" -w watch report --year "$(date -u +%Y)" --ledger "$LEDGER" --label demo-2of3 $PDF -o "$WORK/report"

@@ -22,7 +22,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           repository: embeddednation/bip322-audit
-          ref: v0.6.0
+          ref: v0.7.0
           path: bip322-audit
           ssh-key: ${{ secrets.BIP322_AUDIT_DEPLOY_KEY }}
       - uses: actions/setup-python@v5

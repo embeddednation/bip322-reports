@@ -99,7 +99,7 @@ Period from block {{ r.period.start.height }} ({{ r.period.start.time_utc }}) to
 {% else %}<p class="muted">No transactions in the period.</p>{% endif %}
 
 <h2>Closing balance · block {{ r.closing.height }}</h2>
-<p class="muted">Each output is backed by the BIP-322 proof of control whose snapshot listed it; every proof was re-verified when this report was generated. Proofs are per address: a signature over the message shown, produced by the keys that lock the address.</p>
+<p class="muted">Each output is backed by a BIP-322 proof of control for its address, re-verified when this report was generated. A proof is a signature over the message shown, produced by the keys that lock the address, so it covers every output paid there, including outputs created after the proof.</p>
 <table>
   <colgroup><col class="w-out"><col><col class="w-btc"><col style="width:24%"></colgroup>
   <tr><th>Output</th><th>Address</th><th class="num">BTC</th><th>Proof</th></tr>
@@ -110,7 +110,7 @@ Period from block {{ r.period.start.height }} ({{ r.period.start.time_utc }}) to
     <td class="num">{{ c.amount_btc }}</td>
     <td>{% if c.proof %}
       {% if c.proof.verified %}<span class="badge ok">verified</span>{% else %}<span class="badge bad">{{ c.proof.state }}</span>{% endif %}
-      stamp block {{ c.proof.stamp.height }} ({{ c.proof.stamp.time }})<br>
+      stamp block {{ c.proof.stamp.height }} ({{ c.proof.stamp.time }}){% if c.proof.before_output %}, address proven before this output existed{% endif %}<br>
       <span class="muted">{{ c.proof.message.splitlines()[0] }}</span>
       {% if c.other_proofs %}<br><span class="muted">+{{ c.other_proofs }} earlier proof(s)</span>{% endif %}
       {% else %}<span class="badge bad">no proof</span>{% endif %}</td>

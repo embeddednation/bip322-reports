@@ -2,8 +2,12 @@
 
 The ledger (any directory tree of bip322-audit bundles) is read and every
 ``proofs.json`` in it is re-verified against the node at report time.  A coin
-is *covered* when a verified proof's snapshot lists that exact output.  Among
-several, the one with the latest stamp wins; all are kept for the record.
+is *covered* when a verified proof exists for its address: a BIP-322 proof is
+about the script behind an address, so it covers every output paid there,
+whether the proof was made before the output existed (a change address proven
+before the spend was broadcast) or after (a snapshot that listed it).  Among
+several proofs the verified ones come first, then those whose snapshot listed
+the exact output, then the latest stamp; all are kept for the record.
 """
 
 from __future__ import annotations
@@ -75,10 +79,17 @@ class Cover:
     signature: str
     variant: str
     state: str  # the signature's verdict now
+    lists_output: bool  # the bundle's snapshot listed this very output
+    coin_height: int | None = None
 
     @property
     def verified(self) -> bool:
         return self.state == "valid" and self.bundle.ok
+
+    @property
+    def before_output(self) -> bool:
+        """The proof was made before the output existed (an address proven ahead of use)."""
+        return self.coin_height is not None and int(self.bundle.stamp["height"]) < self.coin_height
 
     def to_dict(self) -> dict:
         return {
@@ -90,6 +101,8 @@ class Cover:
             "variant": self.variant,
             "state": self.state,
             "verified": self.verified,
+            "lists_output": self.lists_output,
+            "before_output": self.before_output,
         }
 
 
@@ -121,24 +134,27 @@ def relative_name(path: Path, roots) -> str:
 
 
 def cover_coins(coins: list[Coin], bundles: list[Bundle]) -> dict[Outpoint, list[Cover]]:
-    """For each coin, the proofs that list it, best first (verified, then latest stamp)."""
+    """For each coin, the proofs for its address, best first (verified, then listing the output, then latest stamp)."""
     by_outpoint: dict[Outpoint, list[Cover]] = {c.outpoint: [] for c in coins}
     for bundle in bundles:
         for proof in bundle.document["proofs"]:
-            for u in proof["utxos"]:
-                key = (u["txid"], int(u["vout"]))
-                if key in by_outpoint:
-                    by_outpoint[key].append(
-                        Cover(
-                            bundle,
-                            proof["address"],
-                            proof["signature"],
-                            proof.get("variant", proof["signature"][:3]),
-                            bundle.proof_state(proof["address"]),
-                        )
+            listed = {(u["txid"], int(u["vout"])) for u in proof["utxos"]}
+            for coin in coins:
+                if coin.address != proof["address"]:
+                    continue
+                by_outpoint[coin.outpoint].append(
+                    Cover(
+                        bundle,
+                        proof["address"],
+                        proof["signature"],
+                        proof.get("variant", proof["signature"][:3]),
+                        bundle.proof_state(proof["address"]),
+                        coin.outpoint in listed,
+                        coin.height,
                     )
+                )
     for covers in by_outpoint.values():
-        covers.sort(key=lambda c: (not c.verified, -int(c.bundle.stamp["height"])))
+        covers.sort(key=lambda c: (not c.verified, not c.lists_output, -int(c.bundle.stamp["height"])))
     return by_outpoint
 
 

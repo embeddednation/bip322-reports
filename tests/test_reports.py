@@ -6,7 +6,7 @@ from pathlib import Path
 
 import pytest
 from bip322audit.audit import finalize_bundle
-from bip322audit.ledger import proven_outpoints
+from bip322audit.ledger import proven_addresses
 from bip322audit.snapshot import take_snapshot, write_bundle
 from bip322core.dev.signing import sign_psbt
 from bip322core.psbt import parse_psbt
@@ -81,9 +81,9 @@ def test_periods_resolve_to_the_last_block_before_an_instant(wallet):
     assert parse_when("2026-01-01T12:00:00+02:00") == datetime(2026, 1, 1, 10, tzinfo=timezone.utc)
 
 
-def _bundle(directory: Path, node: FakeNode, wallet, signers, template="Proof of control {date}", skip=None) -> dict:
-    """snapshot, sign with two cosigners, finalize (recording spends from the fake wallet)."""
-    snapshot, psbts = take_snapshot(node, wallet, template, skip_outpoints=skip)
+def _bundle(directory: Path, node: FakeNode, wallet, signers, template="Proof of control {date}", skip=None, addresses=None) -> dict:
+    """snapshot (or prove given addresses), sign with two cosigners, finalize (recording spends from the fake wallet)."""
+    snapshot, psbts = take_snapshot(node, wallet, template, skip_addresses=skip, addresses=addresses)
     write_bundle(directory, snapshot, psbts)
     for entry in snapshot.addresses:
         psbt = parse_psbt((directory / entry["file"]).read_text())
@@ -120,7 +120,7 @@ def test_report_backs_every_closing_coin_with_a_verified_proof(tmp_path, wallet,
     assert "ATTENTION" in format_summary(report) and "UNCOVERED 0.38900000 BTC" in format_summary(report)
 
     # a second bundle for the outputs no bundle proves yet; now the closing balance is fully covered
-    second = _bundle(ledger / "snapshot-2", node, wallet, signer_expressions, skip=proven_outpoints([ledger]))
+    second = _bundle(ledger / "snapshot-2", node, wallet, signer_expressions, skip=proven_addresses([ledger]))
     assert {(u["txid"][:2], u["vout"]) for p in second["proofs"] for u in p["utxos"]} == {("dd", 1), ("ee", 0)}
     (ledger / "snapshot-3").mkdir()
     (ledger / "snapshot-3" / "snapshot.json").write_text("{}")  # taken, not yet signed
@@ -286,3 +286,26 @@ def test_pdf_without_weasyprint_explains_itself(tmp_path, monkeypatch):
     monkeypatch.setitem(sys.modules, "weasyprint", None)  # makes `from weasyprint import HTML` raise ImportError
     with pytest.raises(RuntimeError, match=r"bip322-reports\[pdf\]"):
         write_pdf("<html></html>", tmp_path / "x.pdf")
+
+
+def test_change_address_proven_before_the_spend_covers_the_change_output(tmp_path, wallet, signer_expressions):
+    """The owner's flow: prove the change address, then broadcast; the report covers the change by that proof."""
+    ledger = tmp_path / "ledger"
+    before = _node(wallet, tip=1000)
+    _bundle(ledger / "all", before, wallet, signer_expressions)
+    change = wallet.derive(1, 1).address  # a2: where the 0.29 change of the spend at 1005 will land
+    ahead = _bundle(ledger / "change-ahead", before, wallet, signer_expressions, addresses=[change])
+    assert ahead["proofs"][0]["address"] == change and ahead["proofs"][0]["utxos"] == []
+
+    node = _node(wallet, tip=1020)
+    history = fetch_history(node)
+    report = build_report(history, period_for_heights(node, 1000, 1020), label="T", ledger_roots=[ledger], cli=node)
+    by_out = {(c["txid"][:2], c["vout"]): c["proof"] for c in report["closing"]["coins"]}
+    dd = by_out[("dd", 1)]
+    assert dd["verified"] and dd["bundle"] == "change-ahead/proofs.json" and dd["before_output"] and not dd["lists_output"]
+    assert by_out[("bb", 0)]["lists_output"] and not by_out[("bb", 0)]["before_output"]
+    assert by_out[("ee", 0)] is None  # the internal move went to a3, never proven
+    assert "address proven before this output existed" in render_html(report)
+    # and nothing but a3 is left to prove
+    snapshot, _ = take_snapshot(node, wallet, "x", skip_addresses=proven_addresses([ledger]))
+    assert [a["address"] for a in snapshot.addresses] == [wallet.derive(1).address]

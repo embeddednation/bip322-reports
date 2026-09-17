@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.2.0 (2026-09-17)
+
+- Coverage is by address: a verified proof for a coin's address covers it,
+  including a proof made before the output existed (`bip322-audit prove` on
+  a change address before the spend is broadcast). The report marks such
+  proofs. Requires bip322-audit 0.7.0.
+- Packaging: `bip322-audit` is a direct git dependency at a pinned tag, so
+  one `pip install` of a git URL installs the whole stack; `[kernel]` chains
+  the consensus engine extra through.
+
 ## 0.1.1 (2026-09-17)
 
 - `report` copies every referenced `proofs.json` into `<DIR>/ledger/` next

@@ -22,13 +22,15 @@ deliberately does not do. The proofs themselves are bip322-audit's business
 * **Node cross-check.** When the period ends at the tip the history was taken
   at, the closing coins must equal `listunspent`. This is the external check
   on the history.
-* **Coverage.** A closing coin is covered when a bundle's snapshot lists that
-  exact output and the bundle verifies now: every signature valid, the stamp
-  block in the main chain, no listed output contradicted by the node. Among
-  several covering bundles the verified one with the latest stamp is shown;
-  the others are counted. A stamp after the closing block is fine: an output
-  unspent at a later block was unspent at the closing block, and control of the
-  address is what the proof shows.
+* **Coverage.** A closing coin is covered when a verified bundle carries a
+  proof for its address: every signature valid, the stamp block in the main
+  chain, no listed output contradicted by the node. A BIP-322 proof is about
+  the script behind an address, so it covers every output paid there, before
+  or after the proof was made; the report marks proofs that predate their
+  output (a change address proven before the spend was broadcast). Among
+  several proofs for an address the verified ones come first, then those whose
+  snapshot listed the very output, then the latest stamp; the others are
+  counted.
 * **The verdict.** `RESULT: OK` when the reconciliation holds, every closing
   coin is covered, and the node cross-check either agrees or could not be run.
 
