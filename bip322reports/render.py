@@ -21,6 +21,7 @@ def _env() -> Environment:
     env.filters["btc"] = btc
     env.filters["acct"] = lambda text: f"({text[1:]})" if str(text).startswith("-") else str(text)  # accounting negatives
     env.filters["breakable"] = _breakable
+    env.filters["utc"] = lambda iso: (str(iso).replace("T", " ").replace("Z", " UTC")) if iso else ""
     env.filters["short"] = lambda s, n=16: (s[:n] + "…") if s and len(s) > n else s
     return env
 

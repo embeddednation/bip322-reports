@@ -24,7 +24,7 @@ One line, into a fresh venv; bip322-audit and bip322-core come along at their
 pinned tags, and the three commands land in the venv's `bin`:
 
 ```sh
-python3 -m venv ~/.bip322 && ~/.bip322/bin/pip install "bip322-reports[kernel] @ git+ssh://git@github.com/embeddednation/bip322-reports.git@v0.3.1"
+python3 -m venv ~/.bip322 && ~/.bip322/bin/pip install "bip322-reports[kernel] @ git+ssh://git@github.com/embeddednation/bip322-reports.git@v0.3.2"
 export PATH="$HOME/.bip322/bin:$PATH"
 bip322 engines && bip322-audit help && bip322-reports help
 ```
@@ -135,9 +135,8 @@ control is not title, completeness rests on the holder's representation).
   address, so one made before the output existed (a change address proven
   before the spend) covers it; the report says when that is the case.
 * The distinct messages signed, each with its stamp block, verdict and file.
-* Every movement: time, block, txid, kind (receive, send, internal), net, fee,
-  and the wallet's side of it (outputs spent from the wallet, outputs to the
-  wallet, outputs to outside).
+* Every movement: time, txid, kind (receive, send, internal), net, fee, the
+  running balance, and for a payment the address paid.
 * How to verify all of it independently.
 
 The report names no descriptor, no xpub and no derivation path; the bundles

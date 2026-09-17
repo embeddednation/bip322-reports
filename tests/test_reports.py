@@ -320,10 +320,10 @@ def test_change_address_proven_before_the_spend_covers_the_change_output(tmp_pat
     report40 = build_report(fetch_history(node40), period_for_heights(node40, 1000, 1020), label="T", ledger_roots=[ledger], cli=node40)
     assert report40["coverage"]["covered_after_period_count"] == 3 and "stamped after the period's end: 3/3" in format_summary(report40)
     assert all(c["proof"]["after_period"] and c["proof"]["bundle"] == "year-end/proofs.json" for c in report40["closing"]["coins"])
-    assert "after period end" in render_html(report40)
+    assert "after the period's end" in render_html(report40)
     assert by_out[("bb", 0)]["lists_output"] and not by_out[("bb", 0)]["before_output"]
     assert by_out[("ee", 0)] is None  # the internal move went to a3, never proven
-    assert "before this output" in render_html(report)
+    assert "before this output was received" in render_html(report)
     # after the year-end bundle nothing is left to prove
     with pytest.raises(Exception, match="already proven"):
         take_snapshot(node40, wallet, "x", skip_addresses=proven_addresses([ledger]))

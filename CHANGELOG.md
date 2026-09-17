@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.3.2 (2026-09-17)
+
+- Times instead of block numbers wherever the reader is not verifying
+  something (period, holdings, stamps); blocks stay in parentheses.
+- Movements: no block column, no per-transaction detail cards; a payment's
+  payee address is listed under the transaction instead.
+- Holdings at the end: address and amount, then one proof line (verdict,
+  message, stamp time) and the proof itself. Each coin carries when it was
+  received.
+
 ## 0.3.1 (2026-09-17)
 
 - Closing holdings and their proofs are one table: per output the outpoint,

@@ -58,7 +58,7 @@
   a { color: inherit; text-decoration: none; }
   ol, ul { padding-left: 18px; } li { margin-bottom: 4px; }
   span.meta { string-set: generated attr(data-generated), ref attr(data-ref); }
-  col.w-date { width: 14%; } col.w-block { width: 8%; } col.w-kind { width: 9%; } col.w-num { width: 13%; }
+  col.w-date { width: 13%; } col.w-kind { width: 9%; } col.w-num { width: 13%; }
   col.w-side { width: 18%; } col.w-out { width: 31%; } col.w-btc { width: 13%; } col.w-proof { width: 27%; }
 </style>
 </head>
@@ -83,20 +83,20 @@
   <colgroup><col><col></colgroup>
   {% if r.holder %}<tr><td>Holder</td><td>{{ r.holder }}</td></tr>{% endif %}
   <tr><td>Wallet</td><td>{{ r.label }} · {{ r.chain }} chain{% if r.policy %} · addresses controlled by {{ r.policy }} keys{% endif %}</td></tr>
-  <tr><td>Period</td><td>{{ r.period.start.time_utc[:10] }} to {{ r.period.end.time_utc[:10] }}: after block {{ r.period.start.height }} ({{ r.period.start.time_utc }}) up to and including block {{ r.period.end.height }} ({{ r.period.end.time_utc }}){% if r.period.to_tip %}, the chain tip when this statement was prepared{% endif %}</td></tr>
-  <tr><td>Prepared</td><td>{{ r.generated_utc }} by {{ r.tool }} · reference {{ r.report_id }}</td></tr>
+  <tr><td>Period</td><td>from {{ r.period.start.time_utc | utc }} (block {{ r.period.start.height }}) to {{ r.period.end.time_utc | utc }} (block {{ r.period.end.height }}){% if r.period.to_tip %}, the chain tip when this statement was prepared{% endif %}. Opening figures are as of the first block, closing figures as of the second.</td></tr>
+  <tr><td>Prepared</td><td>{{ r.generated_utc | utc }} by {{ r.tool }} · reference {{ r.report_id }}</td></tr>
   <tr><td>Amounts</td><td>BTC, exact to eight decimals (1 BTC = 100 000 000 satoshi); negative amounts in parentheses{% if r.fiat %}; {{ r.fiat.currency }} values from {{ r.fiat.source }}{% endif %}</td></tr>
 </table>
 
 <div class="tiles">
-  <div class="tile"><div class="k">Opening balance</div><div class="v">{{ r.opening.total_btc }}</div><div class="s">block {{ r.opening.height }} · {{ r.opening.coins | length }} outputs</div></div>
-  <div class="tile"><div class="k">Closing balance</div><div class="v">{{ r.closing.total_btc }}</div><div class="s">block {{ r.closing.height }} · {{ r.closing.coins | length }} outputs</div></div>
+  <div class="tile"><div class="k">Opening balance</div><div class="v">{{ r.opening.total_btc }}</div><div class="s">{{ r.opening.coins | length }} outputs · {{ r.period.start.time_utc[:10] }}</div></div>
+  <div class="tile"><div class="k">Closing balance</div><div class="v">{{ r.closing.total_btc }}</div><div class="s">{{ r.closing.coins | length }} outputs · {{ r.period.end.time_utc[:10] }}</div></div>
   <div class="tile"><div class="k">Net change</div><div class="v">{{ r.totals.net_btc | acct }}</div><div class="s">{{ r.totals.transactions }} transactions · fees {{ r.totals.fees_btc }}</div></div>
   <div class="tile"><div class="k">Proven</div><div class="v">{{ r.coverage.covered_count }} / {{ r.coverage.total_count }}</div><div class="s">closing outputs · {{ r.coverage.covered_btc }}</div></div>
 </div>
 
 <h2>Assertion and checks</h2>
-<p>The holder asserts that the wallet held the outputs listed in section 3 at block {{ r.closing.height }}, controls the keys behind each of their addresses, and that the movements in section 2 are all of the wallet's transactions in the period. The checks below were run against a Bitcoin node when this statement was prepared; section 6 describes how a reader repeats them.</p>
+<p>The holder asserts that the wallet held the outputs listed in section 3 as of {{ r.period.end.time_utc | utc }} (block {{ r.period.end.height }}), controls the keys behind each of their addresses, and that the movements in section 2 are all of the wallet's transactions in the period. The checks below were run against a Bitcoin node when this statement was prepared; section 6 describes how a reader repeats them.</p>
 <table class="checks">
   <colgroup><col><col style="width:56%"><col></colgroup>
   <tr><td>{{ yesno(r.reconciliation.ok) }}</td><td>Opening balance + net change = closing balance</td>
@@ -114,14 +114,14 @@
       <td class="num">{{ r.bundles | selectattr("verified") | list | length }} of {{ r.bundles | length }}</td></tr>
 </table>
 
-<h2>1. Holdings at the start of the period · block {{ r.opening.height }}</h2>
+<h2>1. Holdings at the start of the period · {{ r.period.start.time_utc | utc }}</h2>
 {% if r.opening.coins %}
 <table>
   <colgroup><col><col class="w-btc"></colgroup>
-  <thead><tr><th>Output · address</th><th class="num">Amount</th></tr></thead>
+  <thead><tr><th>Address · output</th><th class="num">Amount</th></tr></thead>
   <tbody>
   {% for c in r.opening.coins %}
-  <tr><td><span class="mono">{{ tx(c.txid) }}:{{ c.vout }}</span><br>{{ addr(c.address) }}</td><td class="num">{{ c.amount_btc }}</td></tr>
+  <tr><td>{{ addr(c.address) }}<br><span class="small muted">output {{ tx(c.txid) }}:{{ c.vout }} · received {{ c.created_utc | utc }}</span></td><td class="num">{{ c.amount_btc }}</td></tr>
   {% endfor %}
   <tr class="total"><td>Opening balance</td><td class="num">{{ r.opening.total_btc }}</td></tr>
   </tbody>
@@ -131,66 +131,53 @@
 <h2>2. Movements in the period</h2>
 {% if r.transactions %}
 <table>
-  <colgroup><col class="w-date"><col class="w-block"><col><col class="w-kind"><col class="w-num"><col class="w-num"><col class="w-num">{% if r.fiat %}<col class="w-num">{% endif %}</colgroup>
-  <thead><tr><th>Date (UTC)</th><th>Blk</th><th>Transaction</th><th>Kind</th><th class="num">Net</th><th class="num">Fee</th><th class="num">Balance</th>{% if r.fiat %}<th class="num">Net {{ r.fiat.currency }}</th>{% endif %}</tr></thead>
+  <colgroup><col class="w-date"><col><col class="w-kind"><col class="w-num"><col class="w-num"><col class="w-num">{% if r.fiat %}<col class="w-num">{% endif %}</colgroup>
+  <thead><tr><th>Date (UTC)</th><th>Transaction</th><th>Kind</th><th class="num">Net</th><th class="num">Fee</th><th class="num">Balance</th>{% if r.fiat %}<th class="num">Net {{ r.fiat.currency }}</th>{% endif %}</tr></thead>
   <tbody>
-  <tr><td colspan="6" class="muted">Opening balance, block {{ r.opening.height }}</td><td class="num">{{ r.opening.total_btc }}</td>{% if r.fiat %}<td></td>{% endif %}</tr>
+  <tr><td colspan="5" class="muted">Opening balance, {{ r.period.start.time_utc | utc }}</td><td class="num">{{ r.opening.total_btc }}</td>{% if r.fiat %}<td></td>{% endif %}</tr>
   {% for t in r.transactions %}
-  <tr><td>{{ t.time_utc[:10] }}<br><span class="muted">{{ t.time_utc[11:] }}</span></td><td>{{ t.height }}</td><td>{{ tx(t.txid) }}</td><td>{{ t.kind }}</td><td class="num">{{ t.net_btc | acct }}</td><td class="num">{{ t.fee_btc or "" }}</td><td class="num">{{ t.balance_after_btc }}</td>
+  <tr><td>{{ t.time_utc[:10] }}<br><span class="muted">{{ t.time_utc[11:19] }}</span></td>
+      <td>{{ tx(t.txid) }}{% for c in t.others_out %}<br><span class="small muted">paid to</span> {{ addr(c.address) }} <span class="small muted">{{ c.amount_btc }}</span>{% endfor %}</td>
+      <td>{{ t.kind }}</td><td class="num">{{ t.net_btc | acct }}</td><td class="num">{{ t.fee_btc or "" }}</td><td class="num">{{ t.balance_after_btc }}</td>
     {% if r.fiat %}<td class="num">{{ (t.fiat.net | acct) if t.fiat.net else "" }}</td>{% endif %}</tr>
   {% endfor %}
-  <tr class="total"><td colspan="4">Closing balance, block {{ r.closing.height }}</td><td class="num">{{ r.totals.net_btc | acct }}</td><td class="num">{{ r.totals.fees_btc }}</td><td class="num">{{ r.closing.total_btc }}</td>{% if r.fiat %}<td></td>{% endif %}</tr>
+  <tr class="total"><td colspan="3">Closing balance, {{ r.period.end.time_utc | utc }}</td><td class="num">{{ r.totals.net_btc | acct }}</td><td class="num">{{ r.totals.fees_btc }}</td><td class="num">{{ r.closing.total_btc }}</td>{% if r.fiat %}<td></td>{% endif %}</tr>
   </tbody>
 </table>
-<p class="small muted">Received {{ r.totals.received_btc }} · paid out {{ r.totals.sent_btc }} · fees {{ r.totals.fees_btc }}. Net is what the wallet received minus what it spent, fees included; "internal" moves coins between the wallet's own addresses and cost only the fee.</p>
-<h3>Transaction details</h3>
-{% for t in r.transactions %}
-<div class="txcard">
-  <div class="title">{{ t.time_utc }} · {{ t.kind }} · {{ t.net_btc | acct }}{% if t.fee_btc %} · fee {{ t.fee_btc }}{% endif %}{% if r.fiat and t.fiat.net %} · {{ t.fiat.net | acct }} {{ r.fiat.currency }} at {{ t.fiat.rate }}{% endif %}</div>
-  <div class="mono">{{ tx(t.txid) }}</div>
-  <table>
-    <colgroup><col class="w-side"><col><col class="w-btc"></colgroup>
-    <tbody>
-    {% for c in t.ours_in %}<tr><td>spent from the wallet</td><td>{{ addr(c.address) }}</td><td class="num">{{ c.amount_btc }}</td></tr>{% endfor %}
-    {% for c in t.ours_out %}<tr><td>to the wallet</td><td>{{ addr(c.address) }}</td><td class="num">{{ c.amount_btc }}</td></tr>{% endfor %}
-    {% for c in t.others_out %}<tr><td>to outside</td><td>{{ addr(c.address) }}</td><td class="num">{{ c.amount_btc }}</td></tr>{% endfor %}
-    </tbody>
-  </table>
-</div>
-{% endfor %}
+<p class="small muted">Received {{ r.totals.received_btc }} · paid out {{ r.totals.sent_btc }} · fees {{ r.totals.fees_btc }}. Net is what the wallet received minus what it spent, fees included; "internal" moves coins between the wallet's own addresses and costs only the fee.{% if r.fiat %} {{ r.fiat.currency }} at the rate in force on the transaction's day.{% endif %}</p>
 {% else %}<p class="muted">No transactions in the period; the closing balance equals the opening balance.</p>{% endif %}
 
-<h2>3. Holdings at the end of the period · block {{ r.closing.height }}, with proof of control</h2>
-<p class="small muted">For each output: the message signed (listed in section 4), the block it was stamped with, the verdict when this statement was prepared, and the signature. A proof is per address, so it covers every output paid there, including outputs created after the proof.</p>
+<h2>3. Holdings at the end of the period · {{ r.period.end.time_utc | utc }}</h2>
+<p class="small muted">Under each output, its proof of control: the verdict when this statement was prepared, which message was signed (section 4) and when it was stamped, then the proof itself, a BIP-322 signature that carries the address's script and the signatures satisfying it. A proof is per address, so it covers every output paid there, including outputs received after the proof was made.</p>
 <table class="coins">
-  <colgroup><col><col class="w-btc"><col class="w-proof"></colgroup>
-  <thead><tr><th>Output · address</th><th class="num">Amount</th><th>Proof of control</th></tr></thead>
+  <colgroup><col><col class="w-btc"></colgroup>
+  <thead><tr><th>Address · output</th><th class="num">Amount</th></tr></thead>
   {% for c in r.closing.coins %}
   <tbody>
   <tr>
-    <td><span class="mono">{{ tx(c.txid) }}:{{ c.vout }}</span><br>{{ addr(c.address) }}<br><span class="muted small">created in block {{ c.height }}</span></td>
+    <td>{{ addr(c.address) }}<br><span class="small muted">output {{ tx(c.txid) }}:{{ c.vout }} · received {{ c.created_utc | utc }}</span></td>
     <td class="num">{{ c.amount_btc }}</td>
-    <td>{% if c.proof %}
-      {% if c.proof.verified %}<span class="badge ok">verified</span>{% else %}<span class="badge bad">{{ c.proof.state }}</span>{% endif %}
-      <span class="small">message {{ c.proof.message_label }} · stamp block {{ c.proof.stamp.height }}{% if c.proof.after_period %} · after period end{% endif %}{% if c.proof.before_output %} · before this output{% endif %}</span>
-      {% else %}<span class="badge bad">no proof</span>{% endif %}</td>
   </tr>
-  {% if c.proof %}
-  <tr class="sig"><td colspan="3"><span class="muted small">signature</span> <span class="mono">{{ c.proof.signature | breakable }}</span></td></tr>
-  {% endif %}
+  <tr class="sig"><td colspan="2">
+    {% if c.proof %}
+    {% if c.proof.verified %}<span class="badge ok">verified</span>{% else %}<span class="badge bad">{{ c.proof.state }}</span>{% endif %}
+    <span class="small">message {{ c.proof.message_label }}, stamped {{ c.proof.stamp.time | utc }}{% if c.proof.after_period %}, after the period's end{% endif %}{% if c.proof.before_output %}, before this output was received{% endif %}</span><br>
+    <span class="mono">{{ c.proof.signature | breakable }}</span>
+    {% else %}<span class="badge bad">no proof</span>{% endif %}
+  </td></tr>
   </tbody>
   {% endfor %}
   <tbody>
-  <tr class="total"><td>Closing balance</td><td class="num">{{ r.closing.total_btc }}</td><td>{{ r.coverage.covered_btc }} proven</td></tr>
+  <tr class="total"><td>Closing balance · {{ r.coverage.covered_btc }} with proof of control</td><td class="num">{{ r.closing.total_btc }}</td></tr>
   </tbody>
 </table>
 {% if r.coverage.uncovered %}
-<p class="bad">Outputs without a verified proof: {% for u in r.coverage.uncovered %}{{ u.txid[:16] }}…:{{ u.vout }} ({{ u.amount_btc }}){% if not loop.last %}, {% endif %}{% endfor %}.</p>
+<p class="bad">Outputs without a verified proof: {% for u in r.coverage.uncovered %}{{ u.address }} ({{ u.amount_btc }}){% if not loop.last %}, {% endif %}{% endfor %}.</p>
 {% endif %}
 
 <h2>4. Messages signed</h2>
 {% if r.bundles %}
-<p class="small muted">Each message ends with a block stamp: the proof was made after that block, and the block is checkable on any node. The file holds the proofs in machine-readable form for the procedures in section 6.</p>
+<p class="small muted">Each message ends with a block stamp, the hash of a block of the Bitcoin chain: the proof was made after that block, and any node confirms the block and its time. The file holds the proofs in machine-readable form for the procedures in section 6.</p>
 <table class="msgs">
   <colgroup><col style="width:5%"><col><col style="width:22%"></colgroup>
   <thead><tr><th></th><th>Message</th><th>Stamp · verification</th></tr></thead>
@@ -198,7 +185,7 @@
   {% for b in r.bundles %}
   <tr><td><strong>{{ b.label }}</strong></td>
       <td><code>{{ b.message }}</code><br><span class="muted small">file ledger/{{ b.bundle }}</span></td>
-      <td class="small">block {{ b.stamp.height }}<br>{{ b.stamp.time }}{% if b.after_period %}<br>after period end{% endif %}<br>{% if b.verified %}<span class="ok">verified</span>{% else %}<span class="bad">not verified{% if b.error %}: {{ b.error }}{% endif %}</span>{% endif %} · {{ b.signatures }} signatures{% if b.contradictions %} · <span class="bad">{{ b.contradictions }} contradiction(s)</span>{% endif %}</td></tr>
+      <td class="small">stamped {{ b.stamp.time | utc }}<br>(block {{ b.stamp.height }}){% if b.after_period %}<br>after the period's end{% endif %}<br>{% if b.verified %}<span class="ok">verified</span>{% else %}<span class="bad">not verified{% if b.error %}: {{ b.error }}{% endif %}</span>{% endif %} · {{ b.signatures }} signatures{% if b.contradictions %} · <span class="bad">{{ b.contradictions }} contradiction(s)</span>{% endif %}</td></tr>
   {% endfor %}
   </tbody>
 </table>
@@ -212,7 +199,7 @@
 
 <h2>5. Basis of preparation and limitations</h2>
 <ul class="small">
-  <li><strong>Point in time.</strong> Holdings are stated as of the blocks named; nothing here says what the wallet holds after block {{ r.closing.height }}.</li>
+  <li><strong>Point in time.</strong> Holdings are stated as of {{ r.period.end.time_utc | utc }} (block {{ r.period.end.height }}); nothing here says what the wallet holds after that.</li>
   <li><strong>Control, not title.</strong> A proof shows that the keys behind an address signed the message. It does not show who owns the coins, whether they are pledged, lent or otherwise encumbered, or what liabilities stand against them.</li>
   <li><strong>Completeness.</strong> The movements and holdings are those of this wallet as known to the holder's node. That the wallet is the holder's only one, or that all of its addresses are in the node, rests on the holder's representation; no cryptographic check establishes it.</li>
   <li><strong>Proofs are per address.</strong> An address proven once is covered for every output paid to it. The date of each proof is its stamp block; section 3 says for each output whether the proof postdates the period.</li>
@@ -225,7 +212,7 @@
 <ol class="small">
   <li><strong>Proofs.</strong> For each file in section 4: <code>bip322-audit verify FILE</code>. This checks every signature against its address, the stamp block, and that each listed output existed at the stamp with the stated amount (and, for outputs spent since, that they were unspent at the stamp). For a second opinion on a signature, <code>bip322-refcheck ADDRESS SIGNATURE MESSAGE</code> runs independent implementations beside it.</li>
   <li><strong>Closing holdings.</strong> For each output in section 3: <code>bitcoin-cli gettxout TXID VOUT</code> shows it unspent with the stated amount and address, or, if spent since, its creating transaction by txid and block shows the same.</li>
-  <li><strong>Opening holdings and movements.</strong> Each transaction in section 2 by txid, with the inputs and outputs listed; the running balance follows from the opening balance and the net of each.</li>
+  <li><strong>Opening holdings and movements.</strong> Each transaction in section 2 by txid; the running balance follows from the opening balance and the net of each.</li>
   <li><strong>Reference.</strong> The reference {{ r.report_id }} in the footer is derived from the figures stated; <code>report.json</code> carries the same reference and every figure in machine-readable form.</li>
 </ol>
 </body>

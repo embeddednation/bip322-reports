@@ -40,6 +40,7 @@ def build_report(
     """
     opening = history.coins_at(period.start.height)
     closing = history.coins_at(period.end.height)
+    created = {tx.txid: tx.iso_time for tx in history.txs}  # when each coin was received: the time of its creating transaction's block
     movements = history.between(period.start.height, period.end.height)
     opening_sat = sum(c.amount_sat for c in opening)
     closing_sat = sum(c.amount_sat for c in closing)
@@ -52,7 +53,12 @@ def build_report(
     covered_sat = 0
     for coin in closing:
         best = covers[coin.outpoint][0] if covers[coin.outpoint] else None
-        row = {**coin.to_dict(), "proof": best.to_dict() if best else None, "other_proofs": len(covers[coin.outpoint]) - 1 if best else 0}
+        row = {
+            **coin.to_dict(),
+            "created_utc": created.get(coin.txid),
+            "proof": best.to_dict() if best else None,
+            "other_proofs": len(covers[coin.outpoint]) - 1 if best else 0,
+        }
         if best and best.verified:
             covered_sat += coin.amount_sat
             used[best.bundle.name] = used.get(best.bundle.name, 0) + 1
@@ -102,7 +108,7 @@ def build_report(
             "height": period.start.height,
             "total_sat": opening_sat,
             "total_btc": btc(opening_sat),
-            "coins": [c.to_dict() for c in opening],
+            "coins": [{**c.to_dict(), "created_utc": created.get(c.txid)} for c in opening],
         },
         "closing": {"height": period.end.height, "total_sat": closing_sat, "total_btc": btc(closing_sat), "coins": closing_rows},
         "transactions": tx_rows,
