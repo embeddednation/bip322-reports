@@ -149,14 +149,15 @@ def test_reports_workflow_on_regtest(core, regtest_wallet, signer_expressions, p
     assert report["opening"]["total_sat"] == 0 and report["closing"]["total_sat"] == history.balance_at(105)
     assert report["totals"]["received_sat"] == 60_000_000 and report["totals"]["fees_sat"] == spend.fee_sat
     assert report["totals"]["sent_sat"] == 20_000_000 - spend.fee_sat  # the fee was taken from the 0.2 sent
-    assert report["coverage"]["complete"] and report["coverage"]["total_count"] == 2
+    closing = history.coins_at(105)  # Core's coin selection decides whether the 0.1 output survives the spend
+    assert report["coverage"]["complete"] and report["coverage"]["total_count"] == len(closing) in (1, 2)
     used = {b["bundle"].split("/")[0]: b["used_for"] for b in report["bundles"]}
-    assert used == {"snapshot-first": 1, "snapshot-change": 1} and all(b["verified"] for b in report["bundles"])
+    assert used == {"snapshot-first": len(closing) - 1, "snapshot-change": 1} and all(b["verified"] for b in report["bundles"])
     change_row = next(c for c in report["closing"]["coins"] if c["address"] == change)
     assert change_row["proof"]["before_output"] and not change_row["proof"]["lists_output"]
     assert report["node_check"]["ok"] and report["reconciliation"]["ok"]
     html = render_html(report)
-    assert "complete" in html and spend_txid in html
+    assert "pill ok" in html and spend_txid in html
 
     # ---- a sub-period: only the spend, opening balance from before it ----------- #
     part = build_report(history, period_for_heights(watch, 103, 105), label="regtest", ledger_roots=[ledger], cli=watch)

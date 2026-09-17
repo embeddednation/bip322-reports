@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.2.2 (2026-09-17)
+
+- Report redesign: result on the first page, key figures, a checks table,
+  numbered sections, running page headers and footers, tables that keep
+  rows together, transaction cards. The "stamped after the period's end"
+  check is marked not applicable when the period runs to the tip.
+
 ## 0.2.1 (2026-09-17)
 
 - Each closing coin's proof says whether its stamp is after the period's end,
