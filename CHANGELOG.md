@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.4.3 (2026-09-17)
+
+- Each address page has a *script* step: `bip322 decodesignature --text`
+  and its output, deriving the scriptPubKey from the script inside the proof,
+  with a badge saying it is the page's address. The page and the basis section
+  say what is proven, a scriptPubKey, and how outputs are tied to it.
+- Long single-word arguments in printed commands are split with `\` too.
+- Requires bip322-core 0.7.0 and bip322-audit 0.9.3.
+
 ## 0.4.2 (2026-09-17)
 
 - Section 3 is the summary of addresses, control status and amounts;

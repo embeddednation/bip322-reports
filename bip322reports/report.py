@@ -10,7 +10,8 @@ from pathlib import Path
 
 from bip322audit.holdings import format_holdings, holdings, holdings_command
 from bip322audit.rpc import BitcoinCli, RpcError, btc
-from bip322core.cli import format_verify_text
+from bip322core.cli import decode_signature_report, format_decode_text, format_verify_text
+from bip322core.core import BIP322Error
 
 from . import TOOL
 from .coverage import cover_coins, load_ledger, pending_bundles
@@ -72,10 +73,12 @@ def build_report(
             row["proof"]["after_period"] = int(row["proof"]["stamp"]["height"]) > period.end.height
     closing_addresses = _by_address(closing_rows)
     opening_addresses = _by_address([{**c.to_dict(), "created_utc": created.get(c.txid)} for c in opening])
+    network = {"main": "main", "test": "test", "regtest": "regtest", "signet": "signet"}.get(history.chain, "main")
     for a in closing_addresses:
         if a["proof"]:
             a["proof"]["command"] = shell_command(["bip322", "verifymessage", a["address"], a["proof"]["signature"], a["proof"]["message"]])
             a["proof"]["output"] = format_verify_text(a["proof"]["verdict"]) if a["proof"].get("verdict") else "(not verified)"
+            a["proof"]["script"] = _script_step(a["address"], a["proof"]["signature"], network)
     onchain_result = _onchain(cli, closing_rows, period, progress) if cli is not None and onchain and closing_rows else None
     uncovered = [r for r in closing_rows if not (r["proof"] and r["proof"]["verified"])]
     after_period = sum(1 for r in closing_rows if r["proof"] and r["proof"]["verified"] and r["proof"]["after_period"])
@@ -183,11 +186,17 @@ WIDTH = 76  # characters per printed command line: fits an A4 page in the statem
 
 
 def shell_words(argv: list[str]) -> str:
-    """A command of plain words, printed over lines of at most WIDTH characters with ``\\`` continuations."""
+    """A command of plain words, printed over lines of at most WIDTH characters with ``\\`` continuations (long words split too)."""
     lines: list[str] = []
     current = ""
     for word in (shlex.quote(w) for w in argv):
-        if current and len(current) + 1 + len(word) > WIDTH:
+        if len(word) > WIDTH:
+            if current:
+                lines.append(current + " \\")
+            chunks = [word[i : i + WIDTH] for i in range(0, len(word), WIDTH)]
+            lines.extend(c + "\\" for c in chunks[:-1])
+            current = chunks[-1]
+        elif current and len(current) + 1 + len(word) > WIDTH:
             lines.append(current + " \\")
             current = word
         else:
@@ -241,6 +250,32 @@ def shell_command(argv: list[str]) -> str:
     body[0] = '"' + body[0]
     body[-1] = body[-1] + '"'
     return "\n".join(lines + body)
+
+
+def _script_step(address: str, signature: str, network: str) -> dict:
+    """The derivation from the proof to the lock it satisfies: witness script (or key) -> hash -> scriptPubKey -> address.
+
+    ``decodesignature --text`` prints it; the statement quotes it.  ``matches``
+    says the scriptPubKey the proof names is this address's, which is what
+    ties the proof of control to the outputs locked to the address.
+    """
+    argv = ["bip322", "decodesignature", signature, "--text"] + (["--network", network] if network != "main" else [])
+    try:
+        decoded = decode_signature_report(signature, network)
+    except (BIP322Error, ValueError) as exc:
+        return {"command": shell_words(argv), "output": f"(cannot decode: {exc})", "script_pubkey": None, "matches": False}
+    items = decoded.get("witness") or (decoded.get("to_sign", {}).get("inputs") or [{}])[0].get("witness", [])
+    named = [
+        (e.get("p2wsh_scriptPubKey") or e.get("p2wpkh_scriptPubKey"), e.get("p2wsh_address") or e.get("p2wpkh_address")) for e in items
+    ]
+    named = [(spk, addr) for spk, addr in named if spk]
+    script_pubkey, derived_address = named[-1] if named else (None, None)
+    return {
+        "command": shell_words(argv),
+        "output": format_decode_text(decoded),
+        "script_pubkey": script_pubkey,
+        "matches": derived_address == address,
+    }
 
 
 def _onchain(cli: BitcoinCli, closing_rows: list[dict], period: Period, progress=None) -> dict:
