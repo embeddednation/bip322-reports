@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.2.1 (2026-09-17)
+
+- Each closing coin's proof says whether its stamp is after the period's end,
+  and the summary counts them: the fact an annual audit wants, established by
+  the block stamp alone.
+
 ## 0.2.0 (2026-09-17)
 
 - Coverage is by address: a verified proof for a coin's address covers it,

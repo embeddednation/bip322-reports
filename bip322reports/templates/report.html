@@ -53,6 +53,7 @@ Period from block {{ r.period.start.height }} ({{ r.period.start.time_utc }}) to
   <tr><td>Reconciliation: opening + net = closing</td><td class="num">{% if r.reconciliation.ok %}<span class="ok">holds</span>{% else %}<span class="bad">FAILS by {{ r.reconciliation.diff_sat | btc }} BTC</span>{% endif %}</td></tr>
   <tr><td>Closing outputs backed by a verified proof</td><td class="num">{{ r.coverage.covered_count }} of {{ r.coverage.total_count }} · {{ r.coverage.covered_btc }} BTC
     {% if r.coverage.complete %}<span class="badge ok">complete</span>{% else %}<span class="badge bad">{{ r.coverage.uncovered_btc }} BTC without proof</span>{% endif %}</td></tr>
+  <tr><td>Closing outputs whose proof is stamped after the period's end</td><td class="num">{{ r.coverage.covered_after_period_count }} of {{ r.coverage.total_count }}</td></tr>
   {% if r.node_check %}
   <tr><td>Node cross-check (listunspent vs closing outputs)</td><td class="num">{% if r.node_check.ok %}<span class="ok">agree</span>{% else %}<span class="bad">disagree</span>{% endif %}</td></tr>
   {% endif %}
@@ -110,7 +111,7 @@ Period from block {{ r.period.start.height }} ({{ r.period.start.time_utc }}) to
     <td class="num">{{ c.amount_btc }}</td>
     <td>{% if c.proof %}
       {% if c.proof.verified %}<span class="badge ok">verified</span>{% else %}<span class="badge bad">{{ c.proof.state }}</span>{% endif %}
-      stamp block {{ c.proof.stamp.height }} ({{ c.proof.stamp.time }}){% if c.proof.before_output %}, address proven before this output existed{% endif %}<br>
+      stamp block {{ c.proof.stamp.height }} ({{ c.proof.stamp.time }}){% if c.proof.after_period %}, after the period's end{% endif %}{% if c.proof.before_output %}, address proven before this output existed{% endif %}<br>
       <span class="muted">{{ c.proof.message.splitlines()[0] }}</span>
       {% if c.other_proofs %}<br><span class="muted">+{{ c.other_proofs }} earlier proof(s)</span>{% endif %}
       {% else %}<span class="badge bad">no proof</span>{% endif %}</td>

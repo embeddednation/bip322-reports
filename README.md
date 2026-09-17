@@ -16,7 +16,7 @@ A report answers, for a wallet and a period:
 Two ways of working with it, the same tool for both:
 
 * **Continuously, for yourself.** Before broadcasting a spend, prove its change address (`bip322-audit prove ADDRESS --ledger LEDGER`, sign, finalize): a valid proof means the quorum controls where the change goes, and the output that lands there later is covered by it. New deposit addresses the same way, or with `snapshot --skip-proven LEDGER` after the fact. A report can then be produced at any time, with every coin backed by your own signed message.
-* **On demand, for an auditor.** Take one bundle over every output with the auditor's own message, and produce the report for the year. The auditor verifies the bundles and the report on their own node with `bip322-audit verify` and `bitcoin-cli`.
+* **On demand, for an auditor.** After the period's end, take one bundle over every output under a message that names the audit, and produce the report for the year; the report says for each closing coin whether its proof is stamped after the period's end. The auditor verifies the bundles and the report on their own node with `bip322-audit verify` and `bitcoin-cli`.
 
 ## Install
 

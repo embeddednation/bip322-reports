@@ -303,6 +303,14 @@ def test_change_address_proven_before_the_spend_covers_the_change_output(tmp_pat
     by_out = {(c["txid"][:2], c["vout"]): c["proof"] for c in report["closing"]["coins"]}
     dd = by_out[("dd", 1)]
     assert dd["verified"] and dd["bundle"] == "change-ahead/proofs.json" and dd["before_output"] and not dd["lists_output"]
+    assert not dd["after_period"] and report["coverage"]["covered_after_period_count"] == 0  # every proof here predates block 1020
+    later = _bundle(ledger / "year-end", _node(wallet, tip=1040), wallet, signer_expressions, "Proof of control, audit FY2023, {date}")
+    assert int(later["stamp"]["height"]) == 1034
+    node40 = _node(wallet, tip=1040)
+    report = build_report(fetch_history(node40), period_for_heights(node40, 1000, 1020), label="T", ledger_roots=[ledger], cli=node40)
+    assert report["coverage"]["covered_after_period_count"] == 3 and "stamped after the period's end: 3/3" in format_summary(report)
+    assert all(c["proof"]["after_period"] and c["proof"]["bundle"] == "year-end/proofs.json" for c in report["closing"]["coins"])
+    assert "after the period" in render_html(report)
     assert by_out[("bb", 0)]["lists_output"] and not by_out[("bb", 0)]["before_output"]
     assert by_out[("ee", 0)] is None  # the internal move went to a3, never proven
     assert "address proven before this output existed" in render_html(report)

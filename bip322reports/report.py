@@ -54,7 +54,11 @@ def build_report(
             covered_sat += coin.amount_sat
             used[best.bundle.name] = used.get(best.bundle.name, 0) + 1
         closing_rows.append(row)
+    for row in closing_rows:
+        if row["proof"]:
+            row["proof"]["after_period"] = int(row["proof"]["stamp"]["height"]) > period.end.height
     uncovered = [r for r in closing_rows if not (r["proof"] and r["proof"]["verified"])]
+    after_period = sum(1 for r in closing_rows if r["proof"] and r["proof"]["verified"] and r["proof"]["after_period"])
 
     tx_rows = []
     received = sent = fees = 0
@@ -116,6 +120,7 @@ def build_report(
             "uncovered_sat": closing_sat - covered_sat,
             "uncovered_btc": btc(closing_sat - covered_sat),
             "covered_count": len(closing_rows) - len(uncovered),
+            "covered_after_period_count": after_period,
             "total_count": len(closing_rows),
             "complete": not uncovered,
             "uncovered": [{k: r[k] for k in ("txid", "vout", "address", "amount_sat", "amount_btc")} for r in uncovered],
@@ -167,7 +172,8 @@ def format_summary(report: dict) -> str:
         f"opening {report['opening']['total_btc']} BTC  closing {report['closing']['total_btc']} BTC  net {report['totals']['net_btc']} BTC  "
         f"({report['totals']['transactions']} transactions, fees {report['totals']['fees_btc']} BTC)",
         f"reconciliation: {'ok' if r['ok'] else 'FAILED (diff ' + btc(r['diff_sat']) + ' BTC)'}",
-        f"proof coverage: {c['covered_count']}/{c['total_count']} closing outputs, {c['covered_btc']} BTC"
+        f"proof coverage: {c['covered_count']}/{c['total_count']} closing outputs, {c['covered_btc']} BTC; "
+        f"stamped after the period's end: {c['covered_after_period_count']}/{c['total_count']}"
         + ("" if c["complete"] else f"; UNCOVERED {c['uncovered_btc']} BTC"),
     ]
     for b in report["bundles"]:
