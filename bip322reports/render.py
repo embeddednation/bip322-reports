@@ -7,6 +7,7 @@ from pathlib import Path
 
 from bip322audit.rpc import btc
 from jinja2 import Environment, PackageLoader, StrictUndefined, select_autoescape
+from markupsafe import Markup, escape
 
 
 def _env() -> Environment:
@@ -19,8 +20,18 @@ def _env() -> Environment:
     )
     env.filters["btc"] = btc
     env.filters["acct"] = lambda text: f"({text[1:]})" if str(text).startswith("-") else str(text)  # accounting negatives
+    env.filters["breakable"] = _breakable
     env.filters["short"] = lambda s, n=16: (s[:n] + "…") if s and len(s) > n else s
     return env
+
+
+def _breakable(text: str, every: int = 12) -> Markup:
+    """A long token with a break opportunity every few characters, so it wraps evenly rather than at slashes.
+
+    ``<wbr>`` adds no character: copying the text yields the token unchanged.
+    """
+    text = str(text)
+    return Markup("<wbr>".join(str(escape(text[i : i + every])) for i in range(0, len(text), every)))
 
 
 def render_html(report: dict, *, explorer: str | None = "https://mempool.space") -> str:

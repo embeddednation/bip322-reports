@@ -57,9 +57,11 @@ def build_report(
             covered_sat += coin.amount_sat
             used[best.bundle.name] = used.get(best.bundle.name, 0) + 1
         closing_rows.append(row)
+    labels = {b.name: _label(i) for i, b in enumerate(bundles)}  # A, B, C ... in stamp order: how the statement refers to a message
     for row in closing_rows:
         if row["proof"]:
             row["proof"]["after_period"] = int(row["proof"]["stamp"]["height"]) > period.end.height
+            row["proof"]["message_label"] = labels[row["proof"]["bundle"]]
     uncovered = [r for r in closing_rows if not (r["proof"] and r["proof"]["verified"])]
     after_period = sum(1 for r in closing_rows if r["proof"] and r["proof"]["verified"] and r["proof"]["after_period"])
 
@@ -133,7 +135,16 @@ def build_report(
             "complete": not uncovered,
             "uncovered": [{k: r[k] for k in ("txid", "vout", "address", "amount_sat", "amount_btc")} for r in uncovered],
         },
-        "bundles": [{**b.to_dict(), "used_for": used.get(b.name, 0)} for b in bundles],
+        "bundles": [
+            {
+                **b.to_dict(),
+                "label": labels[b.name],
+                "after_period": int(b.stamp["height"]) > period.end.height,
+                "used_for": used.get(b.name, 0),
+            }
+            for b in bundles
+        ],
+        "policy": _single({b.document.get("policy") for b in bundles} - {None}),
         "pending_bundles": [_relative_dir(p, ledger_roots) for p in pending_bundles(ledger_roots)] if ledger_roots else [],
         "pending_transactions": [tx.to_dict() for tx in history.pending],
         "fiat": rates.to_dict() if rates else None,
@@ -143,6 +154,20 @@ def build_report(
     node_ok = report["node_check"] is None or report["node_check"].get("ok") is not False  # None: could not be checked, not a failure
     report["ok"] = bool(report["reconciliation"]["ok"] and report["coverage"]["complete"] and node_ok)
     return report
+
+
+def _label(index: int) -> str:
+    """A, B, ... Z, AA, AB, ..."""
+    out = ""
+    index += 1
+    while index:
+        index, rem = divmod(index - 1, 26)
+        out = chr(65 + rem) + out
+    return out
+
+
+def _single(values: set) -> str | None:
+    return next(iter(values)) if len(values) == 1 else (" / ".join(sorted(values)) if values else None)
 
 
 def _report_id(report: dict) -> str:

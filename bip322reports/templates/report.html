@@ -48,6 +48,12 @@
   .badge { display: inline-block; padding: 0 6px; border-radius: 3px; font-size: 8pt; font-weight: 600; border: 1px solid; line-height: 1.5; }
   .badge.ok { color: var(--ok); border-color: var(--ok); } .badge.bad { color: var(--bad); border-color: var(--bad); }
   .txcard { margin: 12px 0 4px; break-inside: avoid; }
+  table.coins tbody { break-inside: avoid; }
+  table.coins tbody:nth-of-type(even) td { background: var(--zebra); }
+  table.coins tbody tr:nth-child(even) td { background: inherit; }
+  table.coins tr.sig td { border-top: 0; padding-top: 0; }
+  table.coins tr:not(.sig):not(.total) td { border-bottom: 0; }
+  table.msgs td:first-child { text-align: center; }
   .txcard .title { font-weight: 600; border-top: 2px solid var(--accent); padding-top: 4px; }
   a { color: inherit; text-decoration: none; }
   ol, ul { padding-left: 18px; } li { margin-bottom: 4px; }
@@ -76,7 +82,7 @@
 <table class="facts">
   <colgroup><col><col></colgroup>
   {% if r.holder %}<tr><td>Holder</td><td>{{ r.holder }}</td></tr>{% endif %}
-  <tr><td>Wallet</td><td>{{ r.label }} · {{ r.chain }} chain</td></tr>
+  <tr><td>Wallet</td><td>{{ r.label }} · {{ r.chain }} chain{% if r.policy %} · addresses controlled by {{ r.policy }} keys{% endif %}</td></tr>
   <tr><td>Period</td><td>{{ r.period.start.time_utc[:10] }} to {{ r.period.end.time_utc[:10] }}: after block {{ r.period.start.height }} ({{ r.period.start.time_utc }}) up to and including block {{ r.period.end.height }} ({{ r.period.end.time_utc }}){% if r.period.to_tip %}, the chain tip when this statement was prepared{% endif %}</td></tr>
   <tr><td>Prepared</td><td>{{ r.generated_utc }} by {{ r.tool }} · reference {{ r.report_id }}</td></tr>
   <tr><td>Amounts</td><td>BTC, exact to eight decimals (1 BTC = 100 000 000 satoshi); negative amounts in parentheses{% if r.fiat %}; {{ r.fiat.currency }} values from {{ r.fiat.source }}{% endif %}</td></tr>
@@ -90,7 +96,7 @@
 </div>
 
 <h2>Assertion and checks</h2>
-<p>The holder asserts that the wallet held the outputs listed in section 3 at block {{ r.closing.height }}, controls the keys behind each of their addresses, and that the movements in section 2 are all of the wallet's transactions in the period. The checks below were run against a Bitcoin node when this statement was prepared; section 7 describes how a reader repeats them.</p>
+<p>The holder asserts that the wallet held the outputs listed in section 3 at block {{ r.closing.height }}, controls the keys behind each of their addresses, and that the movements in section 2 are all of the wallet's transactions in the period. The checks below were run against a Bitcoin node when this statement was prepared; section 6 describes how a reader repeats them.</p>
 <table class="checks">
   <colgroup><col><col style="width:56%"><col></colgroup>
   <tr><td>{{ yesno(r.reconciliation.ok) }}</td><td>Opening balance + net change = closing balance</td>
@@ -104,20 +110,20 @@
   <tr><td>{% if r.node_check.ok is none %}<span class="muted">–</span>{% else %}{{ yesno(r.node_check.ok) }}{% endif %}</td><td>Node cross-check: the wallet's unspent outputs now equal the closing outputs</td>
       <td class="num">{% if r.node_check.ok is none %}not run{% else %}{{ r.node_check.listunspent_count }} listed · {{ r.node_check.closing_count }} closing{% endif %}</td></tr>
   {% endif %}
-  <tr><td>{{ yesno(r.bundles | selectattr("verified") | list | length == r.bundles | length) }}</td><td>Proof bundles verified against the node (signatures, stamp blocks, listed outputs)</td>
+  <tr><td>{{ yesno(r.bundles | selectattr("verified") | list | length == r.bundles | length) }}</td><td>Messages and signatures verified against the node (every signature, every stamp block)</td>
       <td class="num">{{ r.bundles | selectattr("verified") | list | length }} of {{ r.bundles | length }}</td></tr>
 </table>
 
 <h2>1. Holdings at the start of the period · block {{ r.opening.height }}</h2>
 {% if r.opening.coins %}
 <table>
-  <colgroup><col class="w-out"><col><col class="w-btc"></colgroup>
-  <thead><tr><th>Output</th><th>Address</th><th class="num">Amount</th></tr></thead>
+  <colgroup><col><col class="w-btc"></colgroup>
+  <thead><tr><th>Output · address</th><th class="num">Amount</th></tr></thead>
   <tbody>
   {% for c in r.opening.coins %}
-  <tr><td><span class="mono">{{ tx(c.txid) }}:{{ c.vout }}</span></td><td>{{ addr(c.address) }}</td><td class="num">{{ c.amount_btc }}</td></tr>
+  <tr><td><span class="mono">{{ tx(c.txid) }}:{{ c.vout }}</span><br>{{ addr(c.address) }}</td><td class="num">{{ c.amount_btc }}</td></tr>
   {% endfor %}
-  <tr class="total"><td colspan="2">Opening balance</td><td class="num">{{ r.opening.total_btc }}</td></tr>
+  <tr class="total"><td>Opening balance</td><td class="num">{{ r.opening.total_btc }}</td></tr>
   </tbody>
 </table>
 {% else %}<p class="muted">No outputs: the balance at the start of the period was 0.00000000.</p>{% endif %}
@@ -154,82 +160,70 @@
 {% endfor %}
 {% else %}<p class="muted">No transactions in the period; the closing balance equals the opening balance.</p>{% endif %}
 
-<h2>3. Holdings at the end of the period · block {{ r.closing.height }}</h2>
-<p class="small muted">Each output is backed by a BIP-322 proof of control for its address, re-verified when this statement was prepared. A proof is a signature over the message shown in section 4, made by the keys that lock the address, so it covers every output paid there, including outputs created after the proof.</p>
-<table>
-  <colgroup><col class="w-out"><col><col class="w-btc"><col class="w-proof"></colgroup>
-  <thead><tr><th>Output</th><th>Address</th><th class="num">Amount</th><th>Proof of control</th></tr></thead>
-  <tbody>
+<h2>3. Holdings at the end of the period · block {{ r.closing.height }}, with proof of control</h2>
+<p class="small muted">For each output: the message signed (listed in section 4), the block it was stamped with, the verdict when this statement was prepared, and the signature. A proof is per address, so it covers every output paid there, including outputs created after the proof.</p>
+<table class="coins">
+  <colgroup><col><col class="w-btc"><col class="w-proof"></colgroup>
+  <thead><tr><th>Output · address</th><th class="num">Amount</th><th>Proof of control</th></tr></thead>
   {% for c in r.closing.coins %}
+  <tbody>
   <tr>
-    <td><span class="mono">{{ tx(c.txid) }}:{{ c.vout }}</span><br><span class="muted small">created in block {{ c.height }}</span></td>
-    <td>{{ addr(c.address) }}</td>
+    <td><span class="mono">{{ tx(c.txid) }}:{{ c.vout }}</span><br>{{ addr(c.address) }}<br><span class="muted small">created in block {{ c.height }}</span></td>
     <td class="num">{{ c.amount_btc }}</td>
     <td>{% if c.proof %}
       {% if c.proof.verified %}<span class="badge ok">verified</span>{% else %}<span class="badge bad">{{ c.proof.state }}</span>{% endif %}
-      <span class="small">stamp {{ c.proof.stamp.height }}{% if c.proof.after_period %} · after period end{% endif %}{% if c.proof.before_output %} · before this output{% endif %}</span><br>
-      <span class="small muted">{{ c.proof.bundle.rsplit("/", 1)[0] }}</span>
+      <span class="small">message {{ c.proof.message_label }} · stamp block {{ c.proof.stamp.height }}{% if c.proof.after_period %} · after period end{% endif %}{% if c.proof.before_output %} · before this output{% endif %}</span>
       {% else %}<span class="badge bad">no proof</span>{% endif %}</td>
   </tr>
+  {% if c.proof %}
+  <tr class="sig"><td colspan="3"><span class="muted small">signature</span> <span class="mono">{{ c.proof.signature | breakable }}</span></td></tr>
+  {% endif %}
+  </tbody>
   {% endfor %}
-  <tr class="total"><td colspan="2">Closing balance</td><td class="num">{{ r.closing.total_btc }}</td><td>{{ r.coverage.covered_btc }} proven</td></tr>
+  <tbody>
+  <tr class="total"><td>Closing balance</td><td class="num">{{ r.closing.total_btc }}</td><td>{{ r.coverage.covered_btc }} proven</td></tr>
   </tbody>
 </table>
 {% if r.coverage.uncovered %}
 <p class="bad">Outputs without a verified proof: {% for u in r.coverage.uncovered %}{{ u.txid[:16] }}…:{{ u.vout }} ({{ u.amount_btc }}){% if not loop.last %}, {% endif %}{% endfor %}.</p>
 {% endif %}
 
-<h2>4. Proof bundles</h2>
+<h2>4. Messages signed</h2>
 {% if r.bundles %}
-{% for b in r.bundles %}
-<h3>{{ b.bundle.rsplit("/", 1)[0] }}</h3>
-<table class="kv">
-  <colgroup><col><col></colgroup>
+<p class="small muted">Each message ends with a block stamp: the proof was made after that block, and the block is checkable on any node. The file holds the proofs in machine-readable form for the procedures in section 6.</p>
+<table class="msgs">
+  <colgroup><col style="width:5%"><col><col style="width:22%"></colgroup>
+  <thead><tr><th></th><th>Message</th><th>Stamp · verification</th></tr></thead>
   <tbody>
-  <tr><td>Message signed</td><td><code>{{ b.message }}</code></td></tr>
-  <tr><td>Stamp block</td><td>{{ b.stamp.height }} · {{ b.stamp.time }}<br><span class="mono">{{ b.stamp.hash }}</span></td></tr>
-  <tr><td>Policy</td><td>{{ b.policy }}</td></tr>
-  <tr><td>Verification now</td><td>{% if b.verified %}<span class="ok">verified</span>{% else %}<span class="bad">not verified{% if b.error %}: {{ b.error }}{% endif %}</span>{% endif %} · signatures {{ b.signatures }}{% if b.stamp_ok is not none %} · stamp {{ "ok" if b.stamp_ok else "failed" }}{% endif %}{% if b.contradictions %} · <span class="bad">{{ b.contradictions }} contradiction(s)</span>{% endif %}</td></tr>
-  <tr><td>Covers</td><td>{{ b.used_for }} closing output(s) in this statement · {{ b.outputs }} output(s) listed at the stamp, {{ b.total_sat | btc }} BTC</td></tr>
-  </tbody>
-</table>
-{% endfor %}
-{% else %}<p class="muted">No proof bundles were given.</p>{% endif %}
-{% if r.pending_bundles %}
-<h3>Bundles awaiting signatures</h3>
-<ul>{% for p in r.pending_bundles %}<li><code>{{ p }}</code></li>{% endfor %}</ul>
-{% endif %}
-{% if r.pending_transactions %}
-<h3>Unconfirmed transactions (in no balance)</h3>
-<ul>{% for t in r.pending_transactions %}<li>{{ tx(t.txid) }} · {{ t.kind }} · {{ t.net_btc | acct }}</li>{% endfor %}</ul>
-{% endif %}
-
-<h2>5. Signatures</h2>
-<p class="small muted">The BIP-322 signature backing each closing output, as verified: the witness that satisfies the address's script for the message of its bundle.</p>
-<table>
-  <colgroup><col style="width:30%"><col style="width:18%"><col></colgroup>
-  <thead><tr><th>Address</th><th>Bundle</th><th>Signature</th></tr></thead>
-  <tbody>
-  {% for c in r.closing.coins if c.proof %}
-  <tr><td>{{ addr(c.address) }}</td><td>{{ c.proof.bundle.rsplit("/", 1)[0] }}</td><td><span class="mono">{{ c.proof.signature }}</span></td></tr>
+  {% for b in r.bundles %}
+  <tr><td><strong>{{ b.label }}</strong></td>
+      <td><code>{{ b.message }}</code><br><span class="muted small">file ledger/{{ b.bundle }}</span></td>
+      <td class="small">block {{ b.stamp.height }}<br>{{ b.stamp.time }}{% if b.after_period %}<br>after period end{% endif %}<br>{% if b.verified %}<span class="ok">verified</span>{% else %}<span class="bad">not verified{% if b.error %}: {{ b.error }}{% endif %}</span>{% endif %} · {{ b.signatures }} signatures{% if b.contradictions %} · <span class="bad">{{ b.contradictions }} contradiction(s)</span>{% endif %}</td></tr>
   {% endfor %}
   </tbody>
 </table>
+{% else %}<p class="muted">No proofs were given.</p>{% endif %}
+{% if r.pending_bundles %}
+<p class="small muted">Proofs awaiting signatures: {% for p in r.pending_bundles %}<code>{{ p }}</code>{% if not loop.last %}, {% endif %}{% endfor %}.</p>
+{% endif %}
+{% if r.pending_transactions %}
+<p class="small muted">Unconfirmed transactions, in no balance: {% for t in r.pending_transactions %}{{ tx(t.txid) }} ({{ t.kind }}, {{ t.net_btc | acct }}){% if not loop.last %}, {% endif %}{% endfor %}.</p>
+{% endif %}
 
-<h2>6. Basis of preparation and limitations</h2>
+<h2>5. Basis of preparation and limitations</h2>
 <ul class="small">
   <li><strong>Point in time.</strong> Holdings are stated as of the blocks named; nothing here says what the wallet holds after block {{ r.closing.height }}.</li>
   <li><strong>Control, not title.</strong> A proof shows that the keys behind an address signed the message. It does not show who owns the coins, whether they are pledged, lent or otherwise encumbered, or what liabilities stand against them.</li>
   <li><strong>Completeness.</strong> The movements and holdings are those of this wallet as known to the holder's node. That the wallet is the holder's only one, or that all of its addresses are in the node, rests on the holder's representation; no cryptographic check establishes it.</li>
-  <li><strong>Proofs are per address.</strong> An address proven once is covered for every output paid to it. The date of each proof is its stamp block; the checks above say whether it postdates the period.</li>
+  <li><strong>Proofs are per address.</strong> An address proven once is covered for every output paid to it. The date of each proof is its stamp block; section 3 says for each output whether the proof postdates the period.</li>
   <li><strong>No wallet structure is disclosed.</strong> The statement and the bundles name addresses and outputs only; they carry no descriptor, extended public key or derivation path.</li>
   {% if r.fiat %}<li><strong>Fiat values</strong> are informational, from rates the holder supplied ({{ r.fiat.source }}), at the rate in force on each transaction's day.</li>{% endif %}
 </ul>
 
-<h2>7. Verification procedures</h2>
+<h2>6. Verification procedures</h2>
 <p class="small muted">Every figure and proof above is checkable on any Bitcoin node with the chain, without a wallet or an index. The bundles are in <code>ledger/</code> next to this statement.</p>
 <ol class="small">
-  <li><strong>Proofs.</strong> For each bundle: <code>bip322-audit verify ledger/&lt;bundle&gt;/proofs.json</code>. This checks every signature against its address, the stamp block, and that each listed output existed at the stamp with the stated amount (and, for outputs spent since, that they were unspent at the stamp). For a second opinion on a signature, <code>bip322-refcheck ADDRESS SIGNATURE MESSAGE</code> runs independent implementations beside it.</li>
+  <li><strong>Proofs.</strong> For each file in section 4: <code>bip322-audit verify FILE</code>. This checks every signature against its address, the stamp block, and that each listed output existed at the stamp with the stated amount (and, for outputs spent since, that they were unspent at the stamp). For a second opinion on a signature, <code>bip322-refcheck ADDRESS SIGNATURE MESSAGE</code> runs independent implementations beside it.</li>
   <li><strong>Closing holdings.</strong> For each output in section 3: <code>bitcoin-cli gettxout TXID VOUT</code> shows it unspent with the stated amount and address, or, if spent since, its creating transaction by txid and block shows the same.</li>
   <li><strong>Opening holdings and movements.</strong> Each transaction in section 2 by txid, with the inputs and outputs listed; the running balance follows from the opening balance and the net of each.</li>
   <li><strong>Reference.</strong> The reference {{ r.report_id }} in the footer is derived from the figures stated; <code>report.json</code> carries the same reference and every figure in machine-readable form.</li>

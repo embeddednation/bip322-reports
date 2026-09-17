@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.3.1 (2026-09-17)
+
+- Closing holdings and their proofs are one table: per output the outpoint,
+  address, amount, verdict, message label and stamp, with the signature
+  beneath. The bundle section is replaced by a short list of the distinct
+  messages signed (A, B, C ...), each with its stamp, verdict and file. Six
+  sections instead of seven; nothing about the ledger's internals remains.
+- Long signatures wrap evenly.
+
 ## 0.3.0 (2026-09-17)
 
 - The report is a statement: header with holder, wallet, period, preparation
