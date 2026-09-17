@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.2.3 (2026-09-17)
+
+- Depends on bip322-audit 0.7.1 and, through it, bip322-core 0.6.0: `bip322 reports report ...` works via the core's git-style dispatch.
+
 ## 0.2.2 (2026-09-17)
 
 - Report redesign: result on the first page, key figures, a checks table,
