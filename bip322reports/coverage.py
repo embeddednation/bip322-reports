@@ -115,15 +115,16 @@ class Cover:
 
 
 def _engine_names(runs) -> list[str]:
-    """The script engines that passed, by their public names, once each (the verifier runs btclib with two rule sets)."""
+    """The script engines that passed, by public name and version, once each (the verifier runs btclib with two rule sets)."""
     names = {"btclib": "btclib", "kernel": "libbitcoinkernel"}
     out: list[str] = []
     for run in runs:
         if not isinstance(run, dict) or not run.get("ok"):
             continue
         name = names.get(str(run.get("engine", "")).split("-")[0], str(run.get("engine")))
-        if name not in out:
-            out.append(name)
+        label = f"{name} {run['version']}" if run.get("version") else name
+        if label not in out:
+            out.append(label)
     return out
 
 

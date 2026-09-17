@@ -52,9 +52,11 @@
   table.coins tbody tr td { background: #fff; border-bottom: 0; }
   table.coins tbody tr.last td, table.coins tbody tr.total td { border-bottom: 1px solid var(--rule); }
   table.coins tbody tr.total td { border-bottom: 3px double #333; }
-  table.coins tr.lead td { padding-top: 8px; }
+  table.coins tr.lead td { padding-top: 10px; border-top: 1px solid var(--rule); }
+  table.coins tbody:first-of-type tr.lead td { border-top: 0; }
+  table.coins td.addr { font-size: 9.5pt; } table.coins td.addr .mono { font-size: 9.5pt; font-weight: 600; }
+  table.coins td.amt { font-size: 10.5pt; font-weight: 600; }
   table.coins td.k { color: var(--muted); font-size: 8.5pt; text-transform: uppercase; letter-spacing: 0.05em; padding-top: 6px; }
-  table.coins tr.lead td.k { padding-top: 10px; }
   code.msg { white-space: pre-wrap; display: block; }
   .txcard .title { font-weight: 600; border-top: 2px solid var(--accent); padding-top: 4px; }
   a { color: inherit; text-decoration: none; }
@@ -150,23 +152,19 @@
 {% else %}<p class="muted">No transactions in the period; the closing balance equals the opening balance.</p>{% endif %}
 
 <h2>3. Holdings at the end of the period · {{ r.period.end.time_utc | utc }}, with proof of control</h2>
-<p class="small muted">For each address: the message that was signed, the proof, and the verdict. The verification takes exactly these three inputs, <code>bip322 verifymessage ADDRESS PROOF MESSAGE</code>, and answers VALID or INVALID; it is the same for every address. The message's last line is a block of the Bitcoin chain, which dates the proof: it was made after that block, and any node confirms the block's time. A proof is per address and covers every coin held there, including coins received after it was made.</p>
+<p class="small muted">For each address and the amount it holds: the message that was signed, the proof, and the verdict. The verification takes exactly these three inputs, <code>bip322 verifymessage ADDRESS PROOF MESSAGE</code>, and answers VALID or INVALID; it is the same for every address. The message's last line is a block of the Bitcoin chain, which dates the proof: it was made after that block, and any node confirms the block's time. A proof is per address and covers every coin held there, including coins received after it was made.</p>
 <table class="coins">
-  <colgroup><col style="width:13%"><col><col class="w-btc"></colgroup>
-  <thead><tr><th></th><th>Address</th><th class="num">Amount</th></tr></thead>
+  <colgroup><col style="width:12%"><col><col class="w-btc"></colgroup>
   {% for a in r.closing.addresses %}
   <tbody>
-  <tr class="lead">
-    <td class="k">address</td>
-    <td>{{ addr(a.address) }}<br><span class="small muted">{% if a.outputs | length == 1 %}received {{ a.received_first | utc }}{% else %}{{ a.outputs | length }} outputs, received {{ a.received_first | utc }} to {{ a.received_last | utc }}{% endif %}</span></td>
-    <td class="num">{{ a.total_btc }}</td>
-  </tr>
+  <tr class="lead"><td colspan="2" class="addr">{{ addr(a.address) }}</td><td class="num amt">{{ a.total_btc }}</td></tr>
   {% if a.proof %}
   <tr><td class="k">message</td><td colspan="2"><code class="msg">{{ a.proof.message }}</code></td></tr>
   <tr><td class="k">proof</td><td colspan="2"><span class="mono">{{ a.proof.signature | breakable }}</span></td></tr>
   <tr class="last"><td class="k">verdict</td><td colspan="2">
     {% if a.proof.verified %}<span class="badge ok">VALID</span>{% else %}<span class="badge bad">{{ a.proof.state | upper }}</span>{% endif %}
-    <span class="small">{% if a.proof.verifier %}{{ a.proof.verifier }}{% if a.proof.engines %} with {{ a.proof.engines | join(" and ") }}{% endif %} · {% endif %}stamped {{ a.proof.stamp.time | utc }}{% if a.proof.after_period %}, after the period's end{% endif %}{% if a.proof.before_coins == "all" %}, before these coins were received{% elif a.proof.before_coins == "some" %}, before some of these coins were received{% endif %}</span>
+    <span class="small">{% if a.proof.verifier %}{{ a.proof.verifier }}{% for e in a.proof.engines %} · {{ e }}{% endfor %}{% endif %}</span>
+    {% if a.proof.after_period or a.proof.before_coins %}<br><span class="small muted">{% if a.proof.after_period %}made after the period's end{% endif %}{% if a.proof.after_period and a.proof.before_coins %} · {% endif %}{% if a.proof.before_coins == "all" %}made before these coins were received{% elif a.proof.before_coins == "some" %}made before some of these coins were received{% endif %}</span>{% endif %}
   </td></tr>
   {% else %}
   <tr class="last"><td class="k">verdict</td><td colspan="2"><span class="badge bad">NO PROOF</span></td></tr>

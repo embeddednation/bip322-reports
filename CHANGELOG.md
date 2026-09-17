@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.3.4 (2026-09-17)
+
+- Section 3: each address heads its own block with the amount; then message,
+  proof, verdict. The verdict names the verifier and each engine with its
+  version; the stamp is read from the message itself and no longer repeated.
+
 ## 0.3.3 (2026-09-17)
 
 - Holdings at the end of the period are stated per address, each with the
