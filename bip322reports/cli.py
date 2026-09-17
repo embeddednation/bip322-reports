@@ -8,12 +8,14 @@ import sys
 from pathlib import Path
 
 from bip322audit.audit import AuditError
+from bip322audit.ledger import find_proofs
 from bip322audit.rpc import BitcoinCli, RpcError, btc
 from bip322core._version import SPEC
 from bip322core.cli import CLIError, add_help_command, emit
 from bip322core.core import BIP322Error
 
 from . import TOOL
+from .coverage import relative_name
 from .fiat import Rates
 from .history import History, fetch_history
 from .period import block, last_block_before, parse_when, period_between, period_for_heights, period_for_year
@@ -149,6 +151,14 @@ def cmd_report(args) -> int:
     write_csv(report, directory / "transactions.csv")
     if args.pdf:
         write_pdf(html, directory / "report.pdf")
+    if not args.no_proofs and args.ledger:
+        # what the reader needs next to the report: each bundle's proofs.json under the name the report uses.
+        # Never the bundle directories themselves: their PSBTs carry the wallet's xpubs.
+        roots = [Path(p) for p in args.ledger]
+        for path, _ in find_proofs(roots):
+            target = directory / "ledger" / relative_name(path, roots)
+            target.parent.mkdir(parents=True, exist_ok=True)
+            target.write_bytes(path.read_bytes())
     print(format_summary(report), file=sys.stderr)
     print(str(directory))
     return 0
@@ -243,7 +253,10 @@ def build_parser() -> argparse.ArgumentParser:
         metavar="URL",
         help="block explorer for links in the HTML; '' for no links (default %(default)s)",
     )
-    p.add_argument("--pdf", action="store_true", help="also write report.pdf (needs WeasyPrint: pip install 'bip322-reports[pdf]')")
+    p.add_argument("--pdf", action="store_true", help="also write report.pdf (needs WeasyPrint: ./setup.sh --pdf)")
+    p.add_argument(
+        "--no-proofs", action="store_true", help="do not copy the ledger's proofs.json files into <DIR>/ledger/ next to the report"
+    )
     p.add_argument("--engines", default=None, help="comma separated bip322 engines for re-verifying the proofs (default: all installed)")
     p.add_argument("--output", "-o", metavar="DIR", help="report directory (default report-<label>-<period>)")
     p.add_argument("--force", action="store_true", help="write into a non-empty directory")

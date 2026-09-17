@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.1.1 (2026-09-17)
+
+- `report` copies every referenced `proofs.json` into `<DIR>/ledger/` next
+  to the report (`--no-proofs` to skip), so the hand-over needs nothing from
+  the ledger directory itself.
+- `report.html`: tables fit A4; undefined template variables are errors.
+- `setup.sh --pdf` installs WeasyPrint hash-pinned from `requirements-pdf.lock`.
+
 ## 0.1.0 (2026-09-17)
 
 - First release: `history`, `block`, `balance`, `report`. Reports with

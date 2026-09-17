@@ -239,6 +239,10 @@ def test_cli_end_to_end_with_fake_node(tmp_path, wallet, signer_expressions, mon
         and Path("out/transactions.csv").exists()
     )
     assert (
+        Path("out/ledger/one/proofs.json").read_bytes() == (ledger / "one" / "proofs.json").read_bytes()
+    )  # what the reader gets, no PSBTs
+    assert not any(p.suffix == ".psbt" for p in Path("out").rglob("*")) and written["bundles"][0]["bundle"] == "one/proofs.json"
+    assert (
         cli_module.main(["report", "--history", "history.json", "--from-height", "1000", "--to-height", "1012", "-o", "out"]) == 2
     )  # not empty
     assert "not empty" in capsys.readouterr().err

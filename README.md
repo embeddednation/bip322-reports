@@ -117,6 +117,13 @@ bip322-reports help [COMMAND]
 The report names no descriptor, no xpub and no derivation path; the bundles
 it references carry none either. Bundle names are relative to the ledger.
 
+**What to hand over:** the report directory. Besides `report.html`,
+`report.json`, `transactions.csv` (and `report.pdf`) it holds `ledger/` with
+a copy of every referenced `proofs.json` under the name the report uses, so a
+reader can run `bip322-audit verify` on each. Never hand over the ledger
+itself: the bundles' PSBT files carry the wallet's xpubs. `--no-proofs`
+skips the copy.
+
 ## Layout
 
 ```

@@ -99,7 +99,7 @@ def load_ledger(cli: BitcoinCli | None, roots, *, engines=None, progress=None) -
     for path, document in find_proofs(roots):
         if progress:
             progress(f"verifying {path}")
-        name = _relative_name(path, roots)
+        name = relative_name(path, roots)
         try:
             report = verify_proofs(document, cli, engines=engines)
             bundles.append(Bundle(path, document, report, name=name))
@@ -108,7 +108,7 @@ def load_ledger(cli: BitcoinCli | None, roots, *, engines=None, progress=None) -
     return bundles
 
 
-def _relative_name(path: Path, roots) -> str:
+def relative_name(path: Path, roots) -> str:
     """``<bundle dir>/proofs.json`` relative to the ledger root it lies under."""
     for root in roots:
         root = Path(root).resolve()
