@@ -24,7 +24,7 @@ One line, into a fresh venv; bip322-audit and bip322-core come along at their
 pinned tags, and the three commands land in the venv's `bin`:
 
 ```sh
-python3 -m venv ~/.bip322 && ~/.bip322/bin/pip install "bip322-reports[kernel] @ git+ssh://git@github.com/embeddednation/bip322-reports.git@v0.4.1"
+python3 -m venv ~/.bip322 && ~/.bip322/bin/pip install "bip322-reports[kernel] @ git+ssh://git@github.com/embeddednation/bip322-reports.git@v0.4.2"
 export PATH="$HOME/.bip322/bin:$PATH"
 bip322 engines && bip322-audit help && bip322-reports help
 ```
@@ -130,17 +130,18 @@ control is not title, completeness rests on the holder's representation).
 * Period: the instants asked for and the two blocks they resolved to.
 * Summary: opening and closing balance, received, sent, fees, net, the
   reconciliation, the proof coverage, the node cross-check.
-* Holdings at the start and at the end of the period, per address. Each
-  closing address carries its proof of control in the shape the verifier
-  takes it, address, message and proof, followed by the two checks a reader
-  repeats: `bip322 verifymessage ...`, printed as a pasteable command with
-  its verdict and engine versions. A proof is per address, so one made before
-  the coins arrived (a change address proven before the spend) covers them;
-  the statement says when that is the case.
-* Holdings at the end of the period: a summary of addresses and amounts, then
-  one block per output with `bip322 audit holdings TXID:VOUT --at <closing
-  block>` and what it printed, a direct lookup that confirms the address,
-  amount and that the output was held at the closing block.
+* Holdings at the start of the period, per address, and at the end: a
+  summary of addresses, control status and amounts, then one page per
+  address. The page shows the proof of control in the shape the verifier
+  takes it (address, message, proof) with the pasteable `bip322
+  verifymessage ...` command and its printed verdict, then each output locked
+  to the address with the pasteable `bip322 audit holdings TXID:VOUT --at
+  <closing block>` command and its printed answer: the script the output is
+  locked to, the amount, and that it was held at the closing block. That
+  answer is the link between what a BIP-322 proof is about (a script) and
+  what coins are (outputs locked to scripts). A proof is per address, so one
+  made before the coins arrived (a change address proven before the spend)
+  covers them; the statement says when that is the case.
 * Every movement: time, txid, kind (receive, send, internal), net, fee, the
   running balance, and for a payment the address paid.
 * How to verify all of it independently.

@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.4.2 (2026-09-17)
+
+- Section 3 is the summary of addresses, control status and amounts;
+  section 4 is one page per address: proof of control, then each output
+  locked to the address with its on-chain lookup, which now prints the
+  locking script. The basis section states the link: a proof is about a
+  script, coins are outputs locked to scripts, the node reports which.
+- Requires bip322-audit 0.9.2.
+
 ## 0.4.1 (2026-09-17)
 
 - Proof of control (section 3) and holdings (section 4) are separate
