@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>{{ r.label }} · {{ r.period.label }}</title>
+<style>
+  @page { size: A4; margin: 18mm 15mm; }
+  body { font: 10.5pt/1.4 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; color: #111; margin: 0 auto; max-width: 190mm; padding: 0 12px; }
+  h1 { font-size: 18pt; margin: 0 0 2px; }
+  h2 { font-size: 13pt; margin: 22px 0 6px; border-bottom: 1px solid #999; padding-bottom: 2px; }
+  h3 { font-size: 11pt; margin: 14px 0 4px; }
+  .muted { color: #555; }
+  table { border-collapse: collapse; width: 100%; margin: 4px 0 8px; font-size: 9.5pt; }
+  th, td { text-align: left; padding: 3px 6px; border-bottom: 1px solid #ddd; vertical-align: top; }
+  th { background: #f2f2f2; font-weight: 600; }
+  td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+  code, .mono { font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace; font-size: 8.5pt; }
+  .wrap { word-break: break-all; }
+  .ok { color: #106b21; font-weight: 600; }
+  .bad { color: #b00020; font-weight: 600; }
+  .badge { display: inline-block; padding: 0 5px; border-radius: 3px; font-size: 8.5pt; border: 1px solid #999; }
+  .badge.ok { border-color: #106b21; }
+  .badge.bad { border-color: #b00020; }
+  a { color: inherit; }
+  .page { page-break-before: always; }
+  .kv td:first-child { width: 34%; color: #555; }
+</style>
+</head>
+<body>
+{% macro addr(a) -%}
+  {% if explorer %}<a class="mono" href="{{ explorer }}/address/{{ a }}">{{ a }}</a>{% else %}<span class="mono">{{ a }}</span>{% endif %}
+{%- endmacro %}
+{% macro tx(t) -%}
+  {% if explorer %}<a class="mono" href="{{ explorer }}/tx/{{ t }}">{{ t }}</a>{% else %}<span class="mono">{{ t }}</span>{% endif %}
+{%- endmacro %}
+
+<h1>{{ r.label }} · {{ r.period.label }}</h1>
+<p class="muted">Balance report with proof of control. Chain {{ r.chain }}. Generated {{ r.generated_utc }} by {{ r.tool }}.
+Period from block {{ r.period.start.height }} ({{ r.period.start.time_utc }}) to block {{ r.period.end.height }} ({{ r.period.end.time_utc }}){% if r.period.to_tip %}, the chain tip when the report was made{% endif %}.
+{% if r.period.start_when %}Asked for: {{ r.period.start_when }} to {{ r.period.end_when }} (UTC); each bound is the last block before that instant.{% endif %}</p>
+
+<h2>Summary</h2>
+<table class="kv">
+  <tr><td>Opening balance (block {{ r.opening.height }})</td><td class="num">{{ r.opening.total_btc }} BTC · {{ r.opening.coins | length }} outputs</td></tr>
+  <tr><td>Received</td><td class="num">{{ r.totals.received_btc }} BTC</td></tr>
+  <tr><td>Sent</td><td class="num">{{ r.totals.sent_btc }} BTC</td></tr>
+  <tr><td>Fees paid</td><td class="num">{{ r.totals.fees_btc }} BTC</td></tr>
+  <tr><td>Net change ({{ r.totals.transactions }} transactions)</td><td class="num">{{ r.totals.net_btc }} BTC</td></tr>
+  <tr><td>Closing balance (block {{ r.closing.height }})</td><td class="num"><strong>{{ r.closing.total_btc }} BTC</strong> · {{ r.closing.coins | length }} outputs</td></tr>
+  <tr><td>Reconciliation: opening + net = closing</td><td class="num">{% if r.reconciliation.ok %}<span class="ok">holds</span>{% else %}<span class="bad">FAILS by {{ r.reconciliation.diff_sat | btc }} BTC</span>{% endif %}</td></tr>
+  <tr><td>Closing outputs backed by a verified proof</td><td class="num">{{ r.coverage.covered_count }} of {{ r.coverage.total_count }} · {{ r.coverage.covered_btc }} BTC
+    {% if r.coverage.complete %}<span class="badge ok">complete</span>{% else %}<span class="badge bad">{{ r.coverage.uncovered_btc }} BTC without proof</span>{% endif %}</td></tr>
+  {% if r.node_check %}
+  <tr><td>Node cross-check (listunspent vs closing outputs)</td><td class="num">{% if r.node_check.ok %}<span class="ok">agree</span>{% else %}<span class="bad">disagree</span>{% endif %}</td></tr>
+  {% endif %}
+  {% if r.fiat %}
+  <tr><td>Valuation</td><td class="num">{{ r.fiat.currency }}, {{ r.fiat.source }}</td></tr>
+  {% endif %}
+</table>
+
+<h2>Opening balance · block {{ r.opening.height }}</h2>
+{% if r.opening.coins %}
+<table>
+  <tr><th>Output</th><th>Address</th><th class="num">BTC</th></tr>
+  {% for c in r.opening.coins %}
+  <tr><td>{{ tx(c.txid) }}:{{ c.vout }}</td><td>{{ addr(c.address) }}</td><td class="num">{{ c.amount_btc }}</td></tr>
+  {% endfor %}
+  <tr><th colspan="2">Total</th><th class="num">{{ r.opening.total_btc }}</th></tr>
+</table>
+{% else %}<p class="muted">No outputs.</p>{% endif %}
+
+<h2>Transactions</h2>
+{% if r.transactions %}
+<table>
+  <tr><th>Time (UTC)</th><th>Block</th><th>Transaction</th><th>Kind</th><th class="num">Net BTC</th><th class="num">Fee BTC</th>{% if r.fiat %}<th class="num">Rate</th><th class="num">Net {{ r.fiat.currency }}</th>{% endif %}</tr>
+  {% for t in r.transactions %}
+  <tr><td>{{ t.time_utc }}</td><td>{{ t.height }}</td><td>{{ tx(t.txid) }}</td><td>{{ t.kind }}</td><td class="num">{{ t.net_btc }}</td><td class="num">{{ t.fee_btc or "" }}</td>
+    {% if r.fiat %}<td class="num">{{ t.fiat.rate or "" }}</td><td class="num">{{ t.fiat.net or "" }}</td>{% endif %}</tr>
+  {% endfor %}
+  <tr><th colspan="4">Net</th><th class="num">{{ r.totals.net_btc }}</th><th class="num">{{ r.totals.fees_btc }}</th>{% if r.fiat %}<th></th><th></th>{% endif %}</tr>
+</table>
+{% for t in r.transactions %}
+<h3>{{ t.time_utc }} · {{ t.kind }} · {{ t.net_btc }} BTC</h3>
+<p class="mono wrap">{{ tx(t.txid) }}</p>
+<table>
+  <tr><th>Side</th><th>Address</th><th class="num">BTC</th></tr>
+  {% for c in t.ours_in %}<tr><td>spent from the wallet</td><td>{{ addr(c.address) }}</td><td class="num">{{ c.amount_btc }}</td></tr>{% endfor %}
+  {% for c in t.ours_out %}<tr><td>to the wallet</td><td>{{ addr(c.address) }}</td><td class="num">{{ c.amount_btc }}</td></tr>{% endfor %}
+  {% for c in t.others_out %}<tr><td>to outside</td><td>{{ addr(c.address) }}</td><td class="num">{{ c.amount_btc }}</td></tr>{% endfor %}
+  {% if t.fee_btc %}<tr><td>fee</td><td></td><td class="num">{{ t.fee_btc }}</td></tr>{% endif %}
+</table>
+{% endfor %}
+{% else %}<p class="muted">No transactions in the period.</p>{% endif %}
+
+<h2 class="page">Closing balance · block {{ r.closing.height }}</h2>
+<p class="muted">Each output is backed by the BIP-322 proof of control whose snapshot listed it; every proof was re-verified when this report was generated. Proofs are per address: a signature over the message shown, produced by the keys that lock the address.</p>
+<table>
+  <tr><th>Output</th><th>Address</th><th class="num">BTC</th><th>Proof</th></tr>
+  {% for c in r.closing.coins %}
+  <tr>
+    <td>{{ tx(c.txid) }}:{{ c.vout }}<br><span class="muted">block {{ c.height }}</span></td>
+    <td>{{ addr(c.address) }}</td>
+    <td class="num">{{ c.amount_btc }}</td>
+    <td>{% if c.proof %}
+      {% if c.proof.verified %}<span class="badge ok">verified</span>{% else %}<span class="badge bad">{{ c.proof.state }}</span>{% endif %}
+      stamp block {{ c.proof.stamp.height }} ({{ c.proof.stamp.time }})<br>
+      <span class="muted">{{ c.proof.message.splitlines()[0] }}</span>
+      {% if c.other_proofs %}<br><span class="muted">+{{ c.other_proofs }} earlier proof(s)</span>{% endif %}
+      {% else %}<span class="badge bad">no proof</span>{% endif %}</td>
+  </tr>
+  {% endfor %}
+  <tr><th colspan="2">Total</th><th class="num">{{ r.closing.total_btc }}</th><th>{{ r.coverage.covered_btc }} BTC proven</th></tr>
+</table>
+{% if r.coverage.uncovered %}
+<p class="bad">Outputs without a verified proof: {% for u in r.coverage.uncovered %}{{ u.txid }}:{{ u.vout }} ({{ u.amount_btc }} BTC){% if not loop.last %}, {% endif %}{% endfor %}.
+A new bundle (<code>bip322-audit snapshot --skip-proven LEDGER</code>) covers them.</p>
+{% endif %}
+
+<h2>Proofs</h2>
+{% if r.bundles %}
+{% for b in r.bundles %}
+<h3>{{ b.path }}</h3>
+<table class="kv">
+  <tr><td>Message</td><td><code class="wrap">{{ b.message }}</code></td></tr>
+  <tr><td>Stamp block</td><td>{{ b.stamp.height }} · {{ b.stamp.hash }} · {{ b.stamp.time }}</td></tr>
+  <tr><td>Policy</td><td>{{ b.policy }}</td></tr>
+  <tr><td>Signatures valid</td><td>{{ b.signatures }}{% if b.stamp_ok is not none %} · stamp {{ "ok" if b.stamp_ok else "FAILED" }}{% endif %}{% if b.contradictions %} · <span class="bad">{{ b.contradictions }} contradiction(s)</span>{% endif %}</td></tr>
+  <tr><td>Verified</td><td>{% if b.verified %}<span class="ok">yes</span>{% else %}<span class="bad">no{% if b.error %}: {{ b.error }}{% endif %}</span>{% endif %}</td></tr>
+  <tr><td>Backs</td><td>{{ b.used_for }} closing output(s) in this report; {{ b.outputs }} outputs listed, {{ b.total_sat | btc }} BTC at the stamp</td></tr>
+</table>
+{% endfor %}
+<h3>Signatures</h3>
+<table>
+  <tr><th>Address</th><th>Bundle</th><th>Signature</th></tr>
+  {% for c in r.closing.coins if c.proof %}
+  <tr><td>{{ addr(c.address) }}</td><td>{{ c.proof.bundle }}</td><td><code class="wrap">{{ c.proof.signature }}</code></td></tr>
+  {% endfor %}
+</table>
+{% else %}<p class="muted">No proof bundles were given (no ledger).</p>{% endif %}
+
+{% if r.pending_bundles %}
+<h3>Bundles awaiting signatures</h3>
+<ul>{% for p in r.pending_bundles %}<li><code>{{ p }}</code></li>{% endfor %}</ul>
+{% endif %}
+{% if r.pending_transactions %}
+<h3>Unconfirmed transactions (not in any balance)</h3>
+<ul>{% for t in r.pending_transactions %}<li>{{ tx(t.txid) }} · {{ t.kind }} · {{ t.net_btc }} BTC</li>{% endfor %}</ul>
+{% endif %}
+
+<h2>Verifying this report independently</h2>
+<p class="muted">Every claim above is checkable on any Bitcoin node with the chain, without a wallet or an index:</p>
+<ol class="muted">
+  <li>Each proofs bundle: <code>bip322-audit verify PROOFS.json</code> checks the signatures against the addresses, the stamp block, and that every listed output existed at the stamp with the stated amount (and, for outputs spent since, that they were unspent at the stamp).</li>
+  <li>Each output in the balances: <code>bitcoin-cli gettxout TXID VOUT</code> for unspent ones, or the creating transaction by its block hash.</li>
+  <li>The movements: each transaction by txid, its inputs and outputs as listed.</li>
+</ol>
+</body>
+</html>
