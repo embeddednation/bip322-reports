@@ -141,6 +141,7 @@ def cmd_report(args) -> int:
         rates=rates,
         engines=args.engines.split(",") if args.engines else None,
         progress=_progress,
+        onchain=not args.no_onchain,
     )
     directory = Path(args.output) if args.output else Path(f"report-{label}-{period.label}".replace(" ", "_").replace("/", "_"))
     if directory.exists() and any(directory.iterdir()) and not args.force:
@@ -260,6 +261,11 @@ def build_parser() -> argparse.ArgumentParser:
         "--no-proofs", action="store_true", help="do not copy the ledger's proofs.json files into <DIR>/ledger/ next to the report"
     )
     p.add_argument("--engines", default=None, help="comma separated bip322 engines for re-verifying the proofs (default: all installed)")
+    p.add_argument(
+        "--no-onchain",
+        action="store_true",
+        help="skip the UTXO-set scan of the closing addresses (bip322 audit holdings); minutes on mainnet",
+    )
     p.add_argument("--output", "-o", metavar="DIR", help="report directory (default report-<label>-<period>)")
     p.add_argument("--force", action="store_true", help="write into a non-empty directory")
     p.set_defaults(

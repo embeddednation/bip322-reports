@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.4.0 (2026-09-17)
+
+- Section 3 shows, per address, the two checks a reader repeats as the
+  command to run and what it printed when the statement was prepared:
+  `bip322 verifymessage ADDRESS PROOF MESSAGE` with its verdict and engine
+  lines, and `bip322 audit holdings ADDRESS --at <closing block>` with the
+  outputs it found. The on-chain step runs at preparation time (a UTXO-set
+  scan; `--no-onchain` skips it) and the checks table gains a row for it:
+  holding less than stated means coins were spent since, holding more means
+  the statement missed coins and fails it.
+- Requires bip322-audit 0.8.1 (the `holdings` command) and bip322-core 0.6.2.
+
 ## 0.3.4 (2026-09-17)
 
 - Section 3: each address heads its own block with the amount; then message,

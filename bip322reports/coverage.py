@@ -109,6 +109,7 @@ class Cover:
             "verified": self.verified,
             "verifier": verdict.get("tool"),
             "engines": _engine_names(verdict.get("engines", [])),
+            "verdict": {k: verdict.get(k) for k in ("state", "reason", "engines")},
             "lists_output": self.lists_output,
             "before_output": self.before_output,
         }

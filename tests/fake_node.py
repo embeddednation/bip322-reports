@@ -129,6 +129,26 @@ class FakeNode(BitcoinCli):
                 for t, n, a, sat, h in self.unspent()
                 if self.tip_height - h + 1 >= minconf
             ]
+        if method == "scantxoutset":
+            from embit.script import address_to_scriptpubkey
+
+            objects = params[1] if len(params) > 1 else []
+            wanted = [o["desc"][5:-1] for o in objects if str(o.get("desc", "")).startswith("addr(")]
+            unspents = []
+            for t, n, a, sat, h in self.unspent(mine_only=False):
+                if a not in wanted:
+                    continue
+                unspents.append(
+                    {
+                        "txid": t,
+                        "vout": n,
+                        "scriptPubKey": address_to_scriptpubkey(a).data.hex(),
+                        "desc": f"addr({a})#00000000",
+                        "amount": btc(sat),
+                        "height": h,
+                    }
+                )
+            return {"success": True, "height": self.tip_height, "bestblock": fake_hash(self.tip_height), "unspents": unspents}
         if method == "gettxout":
             txid, vout = params[0], int(params[1])
             for t, n, a, sat, h in self.unspent(mine_only=False):

@@ -4,10 +4,13 @@ from __future__ import annotations
 
 import hashlib
 import json
+import shlex
 from datetime import datetime, timezone
 from pathlib import Path
 
+from bip322audit.holdings import format_holdings, holdings, holdings_command
 from bip322audit.rpc import BitcoinCli, RpcError, btc
+from bip322core.cli import format_verify_text
 
 from . import TOOL
 from .coverage import cover_coins, load_ledger, pending_bundles
@@ -31,6 +34,7 @@ def build_report(
     rates: Rates | None = None,
     engines=None,
     progress=None,
+    onchain: bool = True,
 ) -> dict:
     """The report as a plain dict (what report.json holds and the templates render).
 
@@ -68,6 +72,13 @@ def build_report(
             row["proof"]["after_period"] = int(row["proof"]["stamp"]["height"]) > period.end.height
     closing_addresses = _by_address(closing_rows)
     opening_addresses = _by_address([{**c.to_dict(), "created_utc": created.get(c.txid)} for c in opening])
+    for a in closing_addresses:
+        if a["proof"]:
+            a["proof"]["command"] = (
+                f"bip322 verifymessage {shlex.quote(a['address'])} {shlex.quote(a['proof']['signature'])} {shlex.quote(a['proof']['message'])}"
+            )
+            a["proof"]["output"] = format_verify_text(a["proof"]["verdict"]) if a["proof"].get("verdict") else "(not verified)"
+    onchain_result = _onchain(cli, closing_addresses, period, progress) if cli is not None and onchain and closing_addresses else None
     uncovered = [r for r in closing_rows if not (r["proof"] and r["proof"]["verified"])]
     after_period = sum(1 for r in closing_rows if r["proof"] and r["proof"]["verified"] and r["proof"]["after_period"])
 
@@ -159,13 +170,49 @@ def build_report(
         "policy": _single({b.document.get("policy") for b in bundles} - {None}),
         "pending_bundles": [_relative_dir(p, ledger_roots) for p in pending_bundles(ledger_roots)] if ledger_roots else [],
         "pending_transactions": [tx.to_dict() for tx in history.pending],
+        "onchain": onchain_result,
         "fiat": rates.to_dict() if rates else None,
         "node_check": _node_check(cli, history, period, closing) if cli is not None else None,
     }
     report["report_id"] = _report_id(report)
     node_ok = report["node_check"] is None or report["node_check"].get("ok") is not False  # None: could not be checked, not a failure
-    report["ok"] = bool(report["reconciliation"]["ok"] and report["coverage"]["complete"] and node_ok)
+    chain_ok = (
+        onchain_result is None or not onchain_result.get("error") and onchain_result["more"] == 0
+    )  # more coins than stated: the statement missed some
+    report["ok"] = bool(report["reconciliation"]["ok"] and report["coverage"]["complete"] and node_ok and chain_ok)
     return report
+
+
+def _onchain(cli: BitcoinCli, closing_addresses: list[dict], period: Period, progress=None) -> dict:
+    """Run the reader's on-chain step now, per address, and keep the command with its output.
+
+    ``holdings --at <closing block>`` counts the unspent outputs confirmed by the
+    closing block.  Less than stated means coins were spent since (not a
+    contradiction); more than stated means the statement missed coins.
+    """
+    if progress:
+        progress("scanning the UTXO set for the closing addresses (bip322 audit holdings)")
+    at = period.end.height
+    try:
+        result = holdings(cli, [a["address"] for a in closing_addresses], at=at)
+    except (RpcError, ValueError) as exc:
+        for a in closing_addresses:
+            a["onchain"] = {"command": holdings_command([a["address"]], at), "output": f"(not run: {exc})", "status": "not run"}
+        return {"error": str(exc), "matches": 0, "less": 0, "more": 0, "not_run": len(closing_addresses)}
+    by_address = {r["address"]: r for r in result["addresses"]}
+    counts = {"matches": 0, "less": 0, "more": 0, "not_run": 0}
+    for a in closing_addresses:
+        row = by_address[a["address"]]
+        status = "matches" if row["total_sat"] == a["total_sat"] else ("less" if row["total_sat"] < a["total_sat"] else "more")
+        counts[status] += 1
+        a["onchain"] = {
+            "command": holdings_command([a["address"]], at),
+            "output": format_holdings({**result, "addresses": [row]}),
+            "total_sat": row["total_sat"],
+            "total_btc": row["total_btc"],
+            "status": status,
+        }
+    return {"scan": result["scan"], "at": result["at"], **counts, "addresses": len(closing_addresses), "error": None}
 
 
 def _by_address(rows: list[dict]) -> list[dict]:
@@ -247,6 +294,18 @@ def format_summary(report: dict) -> str:
         )
     if report["pending_bundles"]:
         lines.append("  awaiting signatures: " + ", ".join(report["pending_bundles"]))
+    oc = report.get("onchain")
+    if oc:
+        lines.append(
+            "on chain (holdings --at closing block): "
+            + (
+                f"not run ({oc['error']})"
+                if oc.get("error")
+                else f"{oc['matches']}/{oc['addresses']} addresses match"
+                + (f", {oc['less']} hold less now (spent since)" if oc["less"] else "")
+                + (f", {oc['more']} HOLD MORE than stated" if oc["more"] else "")
+            )
+        )
     nc = report.get("node_check")
     if nc and nc.get("ok") is None:
         lines.append(f"node check (listunspent vs closing coins): not done ({nc.get('error')})")

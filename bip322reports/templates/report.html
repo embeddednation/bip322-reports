@@ -58,6 +58,10 @@
   table.coins td.amt { font-size: 10.5pt; font-weight: 600; }
   table.coins td.k { color: var(--muted); font-size: 8.5pt; text-transform: uppercase; letter-spacing: 0.05em; padding-top: 6px; }
   code.msg { white-space: pre-wrap; display: block; }
+  pre { margin: 2px 0; font-family: "JetBrains Mono", Menlo, Consolas, "DejaVu Sans Mono", monospace; font-size: 7.8pt; line-height: 1.35; white-space: pre-wrap; overflow-wrap: anywhere; word-break: break-all; }
+  pre.cmd { background: #f2f3f5; padding: 4px 6px; border-radius: 3px; }
+  pre.out { padding: 2px 6px; border-left: 2px solid var(--rule); color: #333; }
+  .badge { background: #fff; }
   .txcard .title { font-weight: 600; border-top: 2px solid var(--accent); padding-top: 4px; }
   a { color: inherit; text-decoration: none; }
   ol, ul { padding-left: 18px; } li { margin-bottom: 4px; }
@@ -110,6 +114,11 @@
   <tr><td>{% if r.period.to_tip %}<span class="muted">–</span>{% else %}{{ yesno(r.coverage.covered_after_period_count == r.coverage.total_count) }}{% endif %}</td>
       <td>Proofs stamped after the period's end (control demonstrated after the closing block)</td>
       <td class="num">{% if r.period.to_tip %}not applicable: the period runs to the tip{% else %}{{ r.coverage.addresses_after_period }} of {{ r.coverage.addresses_total }} addresses{% endif %}</td></tr>
+  {% if r.onchain %}
+  <tr><td>{% if r.onchain.error %}<span class="muted">–</span>{% elif r.onchain.more %}{{ yesno(false) }}{% elif r.onchain.less %}<span class="muted">–</span>{% else %}{{ yesno(true) }}{% endif %}</td>
+      <td>On chain: each closing address holds, in outputs confirmed by the closing block, the amount stated</td>
+      <td class="num">{% if r.onchain.error %}not run{% else %}{{ r.onchain.matches }} of {{ r.onchain.addresses }} addresses{% if r.onchain.less %} · {{ r.onchain.less }} hold less now (spent since){% endif %}{% if r.onchain.more %} · {{ r.onchain.more }} hold more{% endif %}{% endif %}</td></tr>
+  {% endif %}
   {% if r.node_check %}
   <tr><td>{% if r.node_check.ok is none %}<span class="muted">–</span>{% else %}{{ yesno(r.node_check.ok) }}{% endif %}</td><td>Node cross-check: the wallet's unspent outputs now equal the closing outputs</td>
       <td class="num">{% if r.node_check.ok is none %}not run{% else %}{{ r.node_check.listunspent_count }} listed · {{ r.node_check.closing_count }} closing{% endif %}</td></tr>
@@ -152,22 +161,35 @@
 {% else %}<p class="muted">No transactions in the period; the closing balance equals the opening balance.</p>{% endif %}
 
 <h2>3. Holdings at the end of the period · {{ r.period.end.time_utc | utc }}, with proof of control</h2>
-<p class="small muted">For each address and the amount it holds: the message that was signed, the proof, and the verdict. The verification takes exactly these three inputs, <code>bip322 verifymessage ADDRESS PROOF MESSAGE</code>, and answers VALID or INVALID; it is the same for every address. The message's last line is a block of the Bitcoin chain, which dates the proof: it was made after that block, and any node confirms the block's time. A proof is per address and covers every coin held there, including coins received after it was made.</p>
+<p class="small muted">Per address: the amount held, the message that was signed, the proof, and the two checks a reader repeats, each as the command to run and what it printed when this statement was prepared. <em>Verify</em> takes the address, the proof and the message and answers VALID or INVALID; the message's last line names a block of the Bitcoin chain, which dates the proof. <em>On chain</em> lists what the address holds, counting the outputs confirmed by the closing block. A proof is per address and covers every coin held there, including coins received after it was made.</p>
 <table class="coins">
-  <colgroup><col style="width:12%"><col><col class="w-btc"></colgroup>
+  <colgroup><col style="width:11%"><col><col class="w-btc"></colgroup>
   {% for a in r.closing.addresses %}
   <tbody>
-  <tr class="lead"><td colspan="2" class="addr">{{ addr(a.address) }}</td><td class="num amt">{{ a.total_btc }}</td></tr>
+  <tr class="lead"><td class="k">address</td><td class="addr">{{ addr(a.address) }}</td><td class="num amt">{{ a.total_btc }}</td></tr>
   {% if a.proof %}
   <tr><td class="k">message</td><td colspan="2"><code class="msg">{{ a.proof.message }}</code></td></tr>
   <tr><td class="k">proof</td><td colspan="2"><span class="mono">{{ a.proof.signature | breakable }}</span></td></tr>
-  <tr class="last"><td class="k">verdict</td><td colspan="2">
+  <tr><td class="k">verify</td><td colspan="2">
+    <pre class="cmd">$ {{ a.proof.command }}</pre>
+    <pre class="out">{{ a.proof.output }}</pre>
     {% if a.proof.verified %}<span class="badge ok">VALID</span>{% else %}<span class="badge bad">{{ a.proof.state | upper }}</span>{% endif %}
-    <span class="small">{% if a.proof.verifier %}{{ a.proof.verifier }}{% for e in a.proof.engines %} · {{ e }}{% endfor %}{% endif %}</span>
-    {% if a.proof.after_period or a.proof.before_coins %}<br><span class="small muted">{% if a.proof.after_period %}made after the period's end{% endif %}{% if a.proof.after_period and a.proof.before_coins %} · {% endif %}{% if a.proof.before_coins == "all" %}made before these coins were received{% elif a.proof.before_coins == "some" %}made before some of these coins were received{% endif %}</span>{% endif %}
+    <span class="small muted">{{ a.proof.verifier }}{% if a.proof.after_period %} · proof made after the period's end{% endif %}{% if a.proof.before_coins == "all" %} · proof made before these coins were received{% elif a.proof.before_coins == "some" %} · proof made before some of these coins were received{% endif %}</span>
   </td></tr>
   {% else %}
-  <tr class="last"><td class="k">verdict</td><td colspan="2"><span class="badge bad">NO PROOF</span></td></tr>
+  <tr><td class="k">verify</td><td colspan="2"><span class="badge bad">NO PROOF</span></td></tr>
+  {% endif %}
+  {% if a.onchain %}
+  <tr class="last"><td class="k">on chain</td><td colspan="2">
+    <pre class="cmd">$ {{ a.onchain.command }}</pre>
+    <pre class="out">{{ a.onchain.output }}</pre>
+    {% if a.onchain.status == "matches" %}<span class="badge ok">MATCHES</span> <span class="small muted">the amount stated</span>
+    {% elif a.onchain.status == "less" %}<span class="badge">LESS NOW</span> <span class="small muted">{{ a.onchain.total_btc }} unspent now; the rest was spent after the period's end</span>
+    {% elif a.onchain.status == "more" %}<span class="badge bad">MORE THAN STATED</span> <span class="small muted">{{ a.onchain.total_btc }} confirmed by the closing block</span>
+    {% else %}<span class="badge">NOT RUN</span>{% endif %}
+  </td></tr>
+  {% else %}
+  <tr class="last"><td class="k">on chain</td><td colspan="2"><pre class="cmd">$ bip322 audit holdings {{ a.address }} --at {{ r.period.end.height }}</pre><span class="small muted">not run when this statement was prepared</span></td></tr>
   {% endif %}
   </tbody>
   {% endfor %}
@@ -198,10 +220,10 @@
 <h2>5. Verification procedures</h2>
 <p class="small muted">Every figure and proof above is checkable on any Bitcoin node with the chain, without a wallet or an index.</p>
 <ol class="small">
-  <li><strong>Proof of control, per address.</strong> With the three inputs printed in section 3: <code>bip322 verifymessage ADDRESS PROOF "MESSAGE"</code> answers VALID. The message's last line names a block: <code>bitcoin-cli getblockheader HASH</code> confirms its height and time, which dates the proof. For a second opinion, <code>bip322-refcheck ADDRESS PROOF "MESSAGE"</code> runs independent implementations beside it.</li>
-  <li><strong>Holdings, per address.</strong> A block explorer's page for the address, or <code>bitcoin-cli scantxoutset start '["addr(ADDRESS)"]'</code>, shows what it holds now; coins spent since the period's end no longer show. The exact outputs behind each amount are in <code>report.json</code>, each checkable with <code>bitcoin-cli gettxout TXID VOUT</code>.</li>
+  <li><strong>Proof of control, per address.</strong> Run the <em>verify</em> command printed under the address; it should print what is printed here, starting with VALID. The message spans two lines inside the quotes: paste the command as it stands. For a second opinion, <code>bip322-refcheck ADDRESS PROOF MESSAGE</code> runs independent implementations beside it, and <code>bitcoin-cli getblockheader HASH</code> with the hash from the message's last line confirms the block's height and time.</li>
+  <li><strong>Holdings, per address.</strong> Run the <em>on chain</em> command printed under the address (a UTXO-set scan, minutes on a mainnet node). Coins spent after the period's end no longer show; the exact outputs behind each amount are in <code>report.json</code>, each checkable with <code>bitcoin-cli gettxout TXID VOUT</code>.</li>
   <li><strong>Movements.</strong> Each transaction in section 2 by txid; the running balance follows from the opening balance and the net of each.</li>
-  <li><strong>All of it at once.</strong> The proofs come as files next to this statement{% if r.bundles %}: {% for b in r.bundles %}<code>ledger/{{ b.bundle }}</code>{% if not loop.last %}, {% endif %}{% endfor %}{% endif %}. <code>bip322-audit verify FILE</code> checks every proof in a file, its stamp block, and that every output the file lists existed at that block. <code>report.json</code> carries every figure of this statement and its reference {{ r.report_id }}.</li>
+  <li><strong>All of it at once.</strong> The proofs come as files next to this statement{% if r.bundles %}: {% for b in r.bundles %}<code>ledger/{{ b.bundle }}</code>{% if not loop.last %}, {% endif %}{% endfor %}{% endif %}. <code>bip322-audit verify FILE</code> checks every proof in a file, its stamp block, and that every output the file lists existed at that block. <code>report.json</code> carries every figure of this statement and its reference {{ r.report_id }}. Both tools install with <code>pip install bip322-reports</code>.</li>
 </ol>
 </body>
 </html>
