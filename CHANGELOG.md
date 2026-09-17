@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.4.1 (2026-09-17)
+
+- Proof of control (section 3) and holdings (section 4) are separate
+  sections: control per address; holdings as a summary table, then one
+  block per output with the on-chain check by direct lookup (`holdings
+  TXID:VOUT`, instant; the UTXO-set scan is no longer used).
+- Printed commands are pasteable: lines end in `\` continuations, no
+  soft wrapping, verified to reassemble exactly in bash. `--no-onchain` is gone.
+- Requires bip322-audit 0.9.1.
+
 ## 0.4.0 (2026-09-17)
 
 - Section 3 shows, per address, the two checks a reader repeats as the

@@ -74,11 +74,9 @@ def build_report(
     opening_addresses = _by_address([{**c.to_dict(), "created_utc": created.get(c.txid)} for c in opening])
     for a in closing_addresses:
         if a["proof"]:
-            a["proof"]["command"] = (
-                f"bip322 verifymessage {shlex.quote(a['address'])} {shlex.quote(a['proof']['signature'])} {shlex.quote(a['proof']['message'])}"
-            )
+            a["proof"]["command"] = shell_command(["bip322", "verifymessage", a["address"], a["proof"]["signature"], a["proof"]["message"]])
             a["proof"]["output"] = format_verify_text(a["proof"]["verdict"]) if a["proof"].get("verdict") else "(not verified)"
-    onchain_result = _onchain(cli, closing_addresses, period, progress) if cli is not None and onchain and closing_addresses else None
+    onchain_result = _onchain(cli, closing_rows, period, progress) if cli is not None and onchain and closing_rows else None
     uncovered = [r for r in closing_rows if not (r["proof"] and r["proof"]["verified"])]
     after_period = sum(1 for r in closing_rows if r["proof"] and r["proof"]["verified"] and r["proof"]["after_period"])
 
@@ -176,43 +174,115 @@ def build_report(
     }
     report["report_id"] = _report_id(report)
     node_ok = report["node_check"] is None or report["node_check"].get("ok") is not False  # None: could not be checked, not a failure
-    chain_ok = (
-        onchain_result is None or not onchain_result.get("error") and onchain_result["more"] == 0
-    )  # more coins than stated: the statement missed some
+    chain_ok = onchain_result is None or bool(onchain_result.get("error")) or onchain_result["contradicted"] == 0
     report["ok"] = bool(report["reconciliation"]["ok"] and report["coverage"]["complete"] and node_ok and chain_ok)
     return report
 
 
-def _onchain(cli: BitcoinCli, closing_addresses: list[dict], period: Period, progress=None) -> dict:
-    """Run the reader's on-chain step now, per address, and keep the command with its output.
+WIDTH = 76  # characters per printed command line: fits an A4 page in the statement's monospace size
 
-    ``holdings --at <closing block>`` counts the unspent outputs confirmed by the
-    closing block.  Less than stated means coins were spent since (not a
-    contradiction); more than stated means the statement missed coins.
+
+def shell_words(argv: list[str]) -> str:
+    """A command of plain words, printed over lines of at most WIDTH characters with ``\\`` continuations."""
+    lines: list[str] = []
+    current = ""
+    for word in (shlex.quote(w) for w in argv):
+        if current and len(current) + 1 + len(word) > WIDTH:
+            lines.append(current + " \\")
+            current = word
+        else:
+            current = f"{current} {word}" if current else word
+    return "\n".join([*lines, current])
+
+
+def shell_command(argv: list[str]) -> str:
+    """A command a reader pastes into a shell, printed over several lines with ``\\`` continuations.
+
+    Bash removes a backslash-newline pair anywhere outside single quotes, so a
+    long token can be split across lines too, as long as the continuation
+    line is not indented.  The last argument (the message) is double quoted
+    with the characters that matter to the shell escaped; the newline inside
+    the message stays a real newline, which double quotes allow.  What the
+    shell reassembles is exactly ``argv``.
+    """
+
+    def split(text: str) -> list[str]:
+        chunks: list[str] = []
+        while len(text) > WIDTH:
+            cut = WIDTH
+            while cut > 1 and text[cut - 1] == "\\":  # never break right after a backslash
+                cut -= 1
+            chunks.append(text[:cut])
+            text = text[cut:]
+        return [*chunks, text]
+
+    lines: list[str] = []
+    current = ""
+    for word in (shlex.quote(w) for w in argv[:-1]):
+        if len(word) > WIDTH:
+            if current:
+                lines.append(current + " \\")
+            *head, tail = split(word)
+            lines.extend(c + "\\" for c in head)
+            current = tail
+        elif current and len(current) + 1 + len(word) > WIDTH:
+            lines.append(current + " \\")
+            current = word
+        else:
+            current = f"{current} {word}" if current else word
+    if current:
+        lines.append(current + " \\")
+    escaped = argv[-1].replace("\\", "\\\\").replace('"', '\\"').replace("$", "\\$").replace("`", "\\`")
+    body: list[str] = []
+    for raw in escaped.split("\n"):
+        *head, tail = split(raw)
+        body.extend(c + "\\" for c in head)
+        body.append(tail)
+    body[0] = '"' + body[0]
+    body[-1] = body[-1] + '"'
+    return "\n".join(lines + body)
+
+
+def _onchain(cli: BitcoinCli, closing_rows: list[dict], period: Period, progress=None) -> dict:
+    """Run the reader's on-chain step now, per output, and keep the command with its output.
+
+    ``holdings TXID:VOUT --at <closing block>`` is a direct lookup.  An output
+    unspent now and confirmed by the closing block was held at that block; the
+    address and amount the node returns are compared with the statement's.
+    Spent since is not a contradiction; a different address or amount is.
     """
     if progress:
-        progress("scanning the UTXO set for the closing addresses (bip322 audit holdings)")
+        progress("looking up the closing outputs on chain (bip322 audit holdings)")
     at = period.end.height
+    counts = {"matches": 0, "spent_since": 0, "contradicted": 0, "not_run": 0}
     try:
-        result = holdings(cli, [a["address"] for a in closing_addresses], at=at)
+        result = holdings(cli, [f"{r['txid']}:{r['vout']}" for r in closing_rows], at=at)
     except (RpcError, ValueError) as exc:
-        for a in closing_addresses:
-            a["onchain"] = {"command": holdings_command([a["address"]], at), "output": f"(not run: {exc})", "status": "not run"}
-        return {"error": str(exc), "matches": 0, "less": 0, "more": 0, "not_run": len(closing_addresses)}
-    by_address = {r["address"]: r for r in result["addresses"]}
-    counts = {"matches": 0, "less": 0, "more": 0, "not_run": 0}
-    for a in closing_addresses:
-        row = by_address[a["address"]]
-        status = "matches" if row["total_sat"] == a["total_sat"] else ("less" if row["total_sat"] < a["total_sat"] else "more")
+        for r in closing_rows:
+            r["onchain"] = {
+                "command": shell_words(holdings_command([f"{r['txid']}:{r['vout']}"], at).split()),
+                "output": f"(not run: {exc})",
+                "status": "not run",
+            }
+        counts["not_run"] = len(closing_rows)
+        return {"error": str(exc), **counts, "outputs": len(closing_rows)}
+    found = {(o["txid"], o["vout"]): o for o in result["outputs"]}
+    for r in closing_rows:
+        o = found[(r["txid"], r["vout"])]
+        if not o["unspent"]:
+            status = "spent_since"
+        elif o["counted"] and o["amount_sat"] == r["amount_sat"] and o["address"] == r["address"]:
+            status = "matches"
+        else:
+            status = "contradicted"
         counts[status] += 1
-        a["onchain"] = {
-            "command": holdings_command([a["address"]], at),
-            "output": format_holdings({**result, "addresses": [row]}),
-            "total_sat": row["total_sat"],
-            "total_btc": row["total_btc"],
+        counted_sat = o["amount_sat"] if o["counted"] else 0
+        r["onchain"] = {
+            "command": shell_words(holdings_command([f"{r['txid']}:{r['vout']}"], at).split()),
+            "output": format_holdings({**result, "outputs": [o], "total_sat": counted_sat, "total_btc": btc(counted_sat)}),
             "status": status,
         }
-    return {"scan": result["scan"], "at": result["at"], **counts, "addresses": len(closing_addresses), "error": None}
+    return {"tip": result["tip"], "at": result["at"], **counts, "outputs": len(closing_rows), "error": None}
 
 
 def _by_address(rows: list[dict]) -> list[dict]:
@@ -221,7 +291,7 @@ def _by_address(rows: list[dict]) -> list[dict]:
     for row in rows:
         g = groups.setdefault(row["address"], {"address": row["address"], "total_sat": 0, "outputs": [], "proof": row.get("proof")})
         g["total_sat"] += row["amount_sat"]
-        g["outputs"].append({k: row[k] for k in ("txid", "vout", "amount_sat", "amount_btc", "height", "created_utc")})
+        g["outputs"].append(row)  # the same dict as in closing["coins"]: the on-chain result lands on it later
     out = []
     for g in groups.values():
         g["total_btc"] = btc(g["total_sat"])
@@ -297,13 +367,13 @@ def format_summary(report: dict) -> str:
     oc = report.get("onchain")
     if oc:
         lines.append(
-            "on chain (holdings --at closing block): "
+            "on chain (holdings by output, --at closing block): "
             + (
                 f"not run ({oc['error']})"
                 if oc.get("error")
-                else f"{oc['matches']}/{oc['addresses']} addresses match"
-                + (f", {oc['less']} hold less now (spent since)" if oc["less"] else "")
-                + (f", {oc['more']} HOLD MORE than stated" if oc["more"] else "")
+                else f"{oc['matches']}/{oc['outputs']} outputs match"
+                + (f", {oc['spent_since']} spent since" if oc["spent_since"] else "")
+                + (f", {oc['contradicted']} CONTRADICTED" if oc["contradicted"] else "")
             )
         )
     nc = report.get("node_check")
