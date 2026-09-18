@@ -1,5 +1,19 @@
 # Changelog
 
+## 0.6.6 (2026-09-18)
+
+- A calmer first page: title, wallet, period, prepared; then the movements
+  (section 1), whose closing row is the holdings on the chain, with a red
+  difference row only when the running balance disagrees; then the closing
+  holdings (section 2) and the UTXO pages (3.n). The opening-holdings
+  list, the tiles and the up-front reconciliation block are gone; the
+  reconciliation figures and the checks are section 4, before the basis
+  (5, which now states the units) and the procedures (6).
+- JetBrains Mono for the hashes, in place of Source Code Pro. The message
+  and proof rows have the terminal's line spacing; the row labels are all
+  lower case (`utxo`); no `$` before commands.
+- economist theme: UTXO in Hong Kong teal, the proof in Singapore orange.
+
 ## 0.6.5 (2026-09-18)
 
 - Bundled typefaces, embedded in the PDF and copied to `<out>/fonts/` for

@@ -128,14 +128,13 @@ control is not title, completeness rests on the holder's representation).
 The wallet is named by the node wallet's name; `--holder NAME` puts the holder's name in the header.
 
 * Period: the instants asked for and the two blocks they resolved to.
-* Up front, in the style of a bank statement: opening balance, the net of
-  the period's transactions, closing balance, and the difference between
-  them, which must be zero; then a short list of checks (proofs valid,
-  stamped after the period, UTXOs found on the chain, node cross-check).
-* Holdings at the start of the period, and at the end: the wallet's UTXOs
-  with the scriptPubKey each is locked to (and its address encoding), then
-  one page per UTXO in two steps, each a pasteable command with what it
-  printed. *Proof of control of the scriptPubKey*: message, proof, and
+* First, in the style of a bank statement, the movements: opening balance,
+  each transaction with its running balance, closing balance, which is the
+  holdings on the chain; a difference from the running balance is printed
+  in red, agreement in one quiet sentence.
+* Holdings at the end of the period: the wallet's UTXOs with the
+  scriptPubKey each is locked to, then one page per UTXO in two steps, each
+  a pasteable command with what it printed. *Proof of control of the scriptPubKey*: message, proof, and
   `bip322 verifymessage <scriptPubKey> ...` with its verdict. *On the
   chain*: `bip322 audit holdings TXID:VOUT --at <block of the proof>`, the
   block named in the proof's message, which reports the same scriptPubKey as
@@ -152,7 +151,7 @@ The wallet is named by the node wallet's name; `--holder NAME` puts the holder's
   Economist Serif and Sans are used. `--heading` picks how section
   headings are set: `number` (the number in red), `tab` (a red tab over a
   grey rule, their chart signature), `redrule`, or `underline`.
-* Typefaces: Adobe's Source Serif 4, Source Sans 3 and Source Code Pro
+* Typefaces: Adobe's Source Serif 4 and Source Sans 3 and JetBrains Mono
   (SIL Open Font License) are bundled and embedded in the PDF, so the
   statement looks the same on every machine; `report` copies them to
   `<out>/fonts/` for the HTML. The commands' output is the finding;
@@ -163,6 +162,9 @@ The wallet is named by the node wallet's name; `--holder NAME` puts the holder's
   bytes themselves. A coin that arrived after its proof (a change address
   proven before the spend) is marked so; the year-end bundle gives it a
   proof dated after it.
+* At the end, the reconciliation figures and the checks (proofs valid,
+  stamped after the period, UTXOs found on the chain, node cross-check),
+  the basis of preparation, and how to verify all of it independently.
 * Every movement: time, txid, kind (receive, send, internal), net, fee, the
   running balance, and for a payment the address paid.
 * How to verify all of it independently.

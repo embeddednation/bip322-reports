@@ -1,10 +1,10 @@
-Source Serif 4 (4.005R), Source Sans 3 (3.052R) and Source Code Pro (2.042R) by Adobe, bundled unmodified for the statement's PDF and HTML.
+Source Serif 4 (4.005R) and Source Sans 3 (3.052R) by Adobe, and JetBrains Mono (2.304) by JetBrains, bundled unmodified for the statement's PDF and HTML. All three are under the SIL Open Font License 1.1, reproduced below; the copyright notices:
 
 Copyright 2014 - 2023 Adobe (http://www.adobe.com/), with Reserved Font Name ‘Source’. All Rights Reserved. Source is a trademark of Adobe in the United States and/or other countries.
 
 Copyright 2010-2024 Adobe (http://www.adobe.com/), with Reserved Font Name 'Source'. All Rights Reserved. Source is a trademark of Adobe in the United States and/or other countries.
 
-© 2023 Adobe (http://www.adobe.com/), with Reserved Font Name 'Source'. All Rights Reserved. Source is a trademark of Adobe in the United States and/or other countries.
+Copyright 2020 The JetBrains Mono Project Authors (https://github.com/JetBrains/JetBrainsMono), with Reserved Font Name 'JetBrains Mono'.
 
 -----------------------------------------------------------
 SIL OPEN FONT LICENSE Version 1.1 - 26 February 2007

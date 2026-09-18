@@ -60,8 +60,8 @@ _M = MARBER
 # across a page (scriptPubKey, block, proof, UTXO, amount): one thing, one
 # colour.  Solarized in the Solarized themes; The Economist's base colours in
 # the economist theme.
-#: Bundled typefaces (Adobe's Source family, SIL OFL; see fonts/LICENSE.md): the open
-#: counterparts of a newspaper's serif for reading, sans for labels and tables, mono for hashes.
+#: Bundled typefaces (SIL OFL; see fonts/LICENSE.md): Adobe's Source Serif 4 and Source Sans 3, the open
+#: counterparts of a newspaper's serif for reading and sans for labels and tables, and JetBrains Mono for hashes.
 FONTS_DIR = Path(__file__).parent / "fonts"
 FONT_FACES = [  # family, file, weight, style
     ("Source Serif 4", "SourceSerif4-Regular.woff2", 400, "normal"),
@@ -72,12 +72,12 @@ FONT_FACES = [  # family, file, weight, style
     ("Source Sans 3", "SourceSans3-It.woff2", 400, "italic"),
     ("Source Sans 3", "SourceSans3-Semibold.woff2", 600, "normal"),
     ("Source Sans 3", "SourceSans3-Bold.woff2", 700, "normal"),
-    ("Source Code Pro", "SourceCodePro-Regular.woff2", 400, "normal"),
-    ("Source Code Pro", "SourceCodePro-Bold.woff2", 700, "normal"),
+    ("JetBrains Mono", "JetBrainsMono-Regular.woff2", 400, "normal"),
+    ("JetBrains Mono", "JetBrainsMono-Bold.woff2", 700, "normal"),
 ]
 SANS = '"Source Sans 3", "Helvetica Neue", Arial, "DejaVu Sans", sans-serif'
 SERIF = '"Source Serif 4", Georgia, "Times New Roman", "DejaVu Serif", serif'
-MONO = '"Source Code Pro", Menlo, Consolas, "DejaVu Sans Mono", monospace'
+MONO = '"JetBrains Mono", Menlo, Consolas, "DejaVu Sans Mono", monospace'
 
 #: How section headings are set: coloured text over a coloured rule; a red tab over a grey rule (The
 #: Economist's chart signature); black text with the section number in red; black text over a thin red rule.
@@ -178,11 +178,12 @@ THEMES = {
         "ok": _M["shanghai35"],
         "bad": _M["red42"],
         "on_pill": "#ffffff",
-        # the values: the base colours that carry text on a light canvas, and the brand red for the block
+        # the values: the brand red for the block, base colours that carry text for the rest; the proof, a blob
+        # matched only with the row above it, takes the one light colour
         "script": _M["chicago45"],
         "block": _M["red"],
-        "proof": _M["hongkong35"],
-        "utxo": _M["chicago20"],
+        "proof": _M["singapore55"],
+        "utxo": _M["hongkong35"],
         "amount": _M["shanghai35"],
         "good": _M["shanghai35"],
         "bad_text": _M["tokyo45"],
