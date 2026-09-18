@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.6.1 (2026-09-18)
+
+- The `kernel` extra pinned bip322-audit 0.10.2 while the package required
+  0.10.3, so `pip install "bip322-reports[kernel] @ ...@v0.6.0"` could not
+  resolve. Both pins are 0.10.3; a test now checks that every pin of a
+  dependency, and setup.sh, name the same tag.
+
 ## 0.6.0 (2026-09-18)
 
 - UTXO pages in colour: one thing, one colour wherever it appears on the

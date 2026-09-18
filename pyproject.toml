@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "bip322-reports"
-version = "0.6.0"
+version = "0.6.1"
 description = "Balance reports in which every coin is backed by a verified BIP-322 proof of control: periods, movements, reconciliation, HTML/CSV/PDF, on top of bip322-audit"
 requires-python = ">=3.10"
 license = "MIT"
@@ -17,7 +17,7 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-kernel = ["bip322-audit[kernel] @ git+ssh://git@github.com/embeddednation/bip322-audit.git@v0.10.2"]
+kernel = ["bip322-audit[kernel] @ git+ssh://git@github.com/embeddednation/bip322-audit.git@v0.10.3"]
 pdf = ["weasyprint>=60"]
 dev = ["pytest>=8"]
 
