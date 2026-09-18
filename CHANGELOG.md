@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.6.4 (2026-09-18)
+
+- `--theme economist`: The Economist's Marber palette over the whole page;
+  the value colours are part of each theme now (Solarized accents in the
+  Solarized themes, Marber base colours there, with the proof in grey).
+- UTXO pages: the row labels read `scriptPubKey`, `message`, `proof`,
+  `verify`, `UTXO`, `lookup` as written; the scriptPubKey row has no
+  subtitle; the introductory paragraph on each page is gone and the colour
+  legend is stated once, where section 3 introduces the pages.
+
 ## 0.6.3 (2026-09-18)
 
 - Solarized light is the default theme. Terminal blocks sit on the page's

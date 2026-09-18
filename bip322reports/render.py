@@ -30,8 +30,45 @@ SOLARIZED = {
 }  # Ethan Schoonover's palette; the accents keep their weight on either background
 _S = SOLARIZED
 
-# The page's colours by theme.  The accent colours of the values a reader matches
-# (scriptPubKey, block, proof, UTXO, amount) are Solarized in every theme.
+MARBER = {  # The Economist's Marber design system: the brand red, "base" colours named after global cities, London greys, canvases
+    "red": "#E3120B",
+    "red42": "#CC100A",
+    "red95": "#FEE7E7",
+    "chicago20": "#141F52",
+    "chicago45": "#2E45B8",
+    "hongkong35": "#169C7F",
+    "tokyo35": "#9C1633",
+    "tokyo45": "#C91D42",
+    "shanghai35": "#4C9C16",
+    "singapore55": "#F97A1F",
+    "newyork55": "#F9C31F",
+    "london5": "#0D0D0D",
+    "london10": "#1A1A1A",
+    "london20": "#333333",
+    "london35": "#595959",
+    "london70": "#B3B3B3",
+    "london85": "#D9D9D9",
+    "london95": "#F2F2F2",
+    "losangeles85": "#E1DFD0",
+    "losangeles90": "#EBE9E0",
+    "losangeles95": "#F5F4EF",
+}
+_M = MARBER
+
+# The page's colours by theme, and the colours of the values a reader matches
+# across a page (scriptPubKey, block, proof, UTXO, amount): one thing, one
+# colour.  Solarized in the Solarized themes; The Economist's base colours in
+# the economist theme.
+_SOLARIZED_VALUES = {
+    "script": _S["blue"],
+    "block": _S["magenta"],
+    "proof": _S["violet"],
+    "utxo": _S["orange"],
+    "amount": _S["green"],
+    "good": _S["green"],
+    "bad_text": _S["red"],
+    "tab": None,
+}
 THEMES = {
     "paper": {  # a white page; only the terminal blocks are Solarized light
         "bg": "#ffffff",
@@ -50,6 +87,8 @@ THEMES = {
         "ok": "#0f7a3a",
         "bad": "#b3261e",
         "on_pill": "#ffffff",
+        "tile": "#f2f3f5",
+        **_SOLARIZED_VALUES,
     },
     "light": {  # Solarized light over the whole page; terminal blocks on base2, the palette's highlight
         "bg": _S["base3"],
@@ -68,6 +107,8 @@ THEMES = {
         "ok": _S["green"],
         "bad": _S["red"],
         "on_pill": _S["base3"],
+        "tile": _S["base2"],
+        **_SOLARIZED_VALUES,
     },
     "dark": {  # Solarized dark
         "bg": _S["base03"],
@@ -86,6 +127,37 @@ THEMES = {
         "ok": _S["green"],
         "bad": _S["red"],
         "on_pill": _S["base03"],
+        "tile": _S["base02"],
+        **_SOLARIZED_VALUES,
+    },
+    "economist": {  # Marber: Los Angeles canvas, London greys, a red tab on each heading, tables ruled not striped
+        "bg": _M["losangeles95"],
+        "ink": _M["london10"],
+        "strong": _M["london5"],
+        "muted": _M["london35"],
+        "rule": _M["london85"],
+        "rule_strong": _M["london20"],
+        "head": _M["losangeles95"],
+        "zebra": _M["losangeles95"],
+        "tile": _M["losangeles90"],
+        "accent": _M["london5"],
+        "term_bg": _M["losangeles95"],
+        "term_ink": _M["london20"],
+        "term_border": _M["losangeles85"],
+        "prompt": _M["london70"],
+        "ok": _M["shanghai35"],
+        "bad": _M["red42"],
+        "on_pill": "#ffffff",
+        # the values: the base colours that carry text on a light canvas; the proof, a blob the reader
+        # only matches with the row above it, stays grey so that the other four stand out
+        "script": _M["chicago45"],
+        "block": _M["tokyo45"],
+        "proof": _M["london35"],
+        "utxo": _M["hongkong35"],
+        "amount": _M["shanghai35"],
+        "good": _M["shanghai35"],
+        "bad_text": _M["red42"],
+        "tab": _M["red"],
     },
 }
 
@@ -153,9 +225,7 @@ def _highlight(text: str, tokens: list) -> Markup:
 def render_html(report: dict, *, explorer: str | None = "https://mempool.space", theme: str = "light") -> str:
     if theme not in THEMES:
         raise ValueError(f"unknown theme {theme!r}; one of {', '.join(THEMES)}")
-    return (
-        _env().get_template("report.html").render(r=report, explorer=(explorer or "").rstrip("/") or None, t={**THEMES[theme], **SOLARIZED})
-    )
+    return _env().get_template("report.html").render(r=report, explorer=(explorer or "").rstrip("/") or None, t=THEMES[theme])
 
 
 def write_csv(report: dict, path: Path) -> None:

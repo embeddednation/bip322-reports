@@ -144,8 +144,10 @@ The wallet is named by the node wallet's name; `--holder NAME` puts the holder's
   The values a reader matches by eye are coloured alike wherever they appear
   on the page (scriptPubKey, block, proof, UTXO, amount; the Solarized
   palette), and the commands and their output sit in terminal blocks in the
-  same palette. `--theme` picks Solarized light (the default), white paper
-  or Solarized dark for the whole page. The commands' output is the finding;
+  same palette. `--theme` picks Solarized light (the default), white paper,
+  Solarized dark, or `economist`: The Economist's Marber palette (Los
+  Angeles canvas, London greys, a red tab on each heading, ruled tables,
+  the values in the system's base colours) for the whole page. The commands' output is the finding;
   a badge follows only when something needs saying (INVALID, NO PROOF,
   CONTRADICTED, a proof that predates its UTXO). BIP-322 defines
   the proof for a scriptPubKey ("the key script to be proven"); an address

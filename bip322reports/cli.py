@@ -257,9 +257,9 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--pdf", action="store_true", help="also write report.pdf (needs WeasyPrint: ./setup.sh --pdf)")
     p.add_argument(
         "--theme",
-        choices=("paper", "light", "dark"),
+        choices=("paper", "light", "dark", "economist"),
         default="light",
-        help="page colours: Solarized light, white paper or Solarized dark (default %(default)s)",
+        help="page colours: Solarized light, white paper, Solarized dark, or The Economist's Marber palette (default %(default)s)",
     )
     p.add_argument(
         "--no-proofs", action="store_true", help="do not copy the ledger's proofs.json files into <DIR>/ledger/ next to the report"
