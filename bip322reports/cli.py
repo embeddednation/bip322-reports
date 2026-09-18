@@ -142,17 +142,19 @@ def cmd_report(args) -> int:
         engines=args.engines.split(",") if args.engines else None,
         progress=_progress,
     )
-    directory = Path(args.output) if args.output else Path(f"report-{label}-{period.label}".replace(" ", "_").replace("/", "_"))
+    directory = Path(args.output) if args.output else Path(f"{label}-{period.label}".replace(" ", "_").replace("/", "_"))
     if directory.exists() and any(directory.iterdir()) and not args.force:
         raise CLIError(f"{directory} exists and is not empty (use --force to overwrite)")
     directory.mkdir(parents=True, exist_ok=True)
-    (directory / "report.json").write_text(json.dumps(report, indent=2, default=str) + "\n")
+    name = directory.resolve().name  # the files are named after their directory: treasury-2026/treasury-2026.pdf
+    report["name"] = name
+    (directory / f"{name}.json").write_text(json.dumps(report, indent=2, default=str) + "\n")
     html = render_html(report, explorer=args.explorer, theme=args.theme, heading=args.heading)
-    (directory / "report.html").write_text(html)
+    (directory / f"{name}.html").write_text(html)
     copy_fonts(directory)
-    write_csv(report, directory / "transactions.csv")
+    write_csv(report, directory / f"{name}.csv")
     if args.pdf:
-        write_pdf(html, directory / "report.pdf")
+        write_pdf(html, directory / f"{name}.pdf")
     if not args.no_proofs and args.ledger:
         # what the reader needs next to the report: each bundle's proofs.json under the name the report uses.
         # Never the bundle directories themselves: their PSBTs carry the wallet's xpubs.
@@ -228,7 +230,7 @@ def build_parser() -> argparse.ArgumentParser:
 
     p = sub.add_parser(
         "report",
-        help="the balance report for a period: report.json, report.html, transactions.csv (and report.pdf)",
+        help="the balance report for a period, as DIR/DIR.json, .html, .csv (and .pdf), DIR being the output directory",
         description=(
             "Opening and closing balances, every movement between them, a reconciliation, and for each closing output the BIP-322 proof of "
             "control from the ledger that lists it, re-verified against the node now. The period is a calendar year, two instants, or two "
@@ -255,7 +257,7 @@ def build_parser() -> argparse.ArgumentParser:
         metavar="URL",
         help="block explorer for links in the HTML; '' for no links (default %(default)s)",
     )
-    p.add_argument("--pdf", action="store_true", help="also write report.pdf (needs WeasyPrint: ./setup.sh --pdf)")
+    p.add_argument("--pdf", action="store_true", help="also write the PDF (needs WeasyPrint: ./setup.sh --pdf)")
     p.add_argument(
         "--theme",
         choices=("paper", "light", "dark", "economist"),

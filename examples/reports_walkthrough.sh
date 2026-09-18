@@ -12,7 +12,7 @@ PORT=18774
 CLI="$CORE/bin/bitcoin-cli -regtest -datadir=$DATADIR -rpcport=$PORT -rpcuser=demo -rpcpassword=demo"
 WORK=${1:-examples/reports-out}; rm -rf "$WORK"; mkdir -p "$WORK"
 DEV=.venv/bin/bip322-dev; AUDIT=.venv/bin/bip322-audit; REPORTS=.venv/bin/bip322-reports
-PDF=$(.venv/bin/python -c 'import weasyprint' 2>/dev/null && echo --pdf || true)   # report.pdf when WeasyPrint is installed
+PDF=$(.venv/bin/python -c 'import weasyprint' 2>/dev/null && echo --pdf || true)   # the PDF when WeasyPrint is installed
 LEDGER="$WORK/ledger"
 step() { printf '\n\033[1m=== %s ===\033[0m\n' "$*"; }
 run() { printf '$ %s\n' "$*" >&2; "$@"; }

@@ -236,12 +236,12 @@ def test_cli_end_to_end_with_fake_node(tmp_path, wallet, signer_expressions, mon
     )
     out, err = capsys.readouterr()
     assert out.strip() == "out" and "RESULT: ATTENTION" in err and "proof coverage: 1/3" in err
-    written = json.loads(Path("out/report.json").read_text())
+    written = json.loads(Path("out/out.json").read_text())
     assert (
         written["label"] == "watch"
         and not written["coverage"]["complete"]
-        and Path("out/report.html").exists()
-        and Path("out/transactions.csv").exists()
+        and Path("out/out.html").exists()
+        and Path("out/out.csv").exists()
     )
     assert (
         Path("out/ledger/one/proofs.json").read_bytes() == (ledger / "one" / "proofs.json").read_bytes()
@@ -255,7 +255,7 @@ def test_cli_end_to_end_with_fake_node(tmp_path, wallet, signer_expressions, mon
     assert cli_module.main(["report", "--history", "history.json", "-o", "x"]) == 2
     assert cli_module.main(["report", "--history", "history.json", "--year", "2023", "-o", "y", "--rate", "5", "--currency", "USD"]) == 0
     capsys.readouterr()
-    written = json.loads(Path("y/report.json").read_text())
+    written = json.loads(Path("y/y.json").read_text())
     assert (
         written["period"]["label"] == "2023"
         and written["fiat"] == {"currency": "USD", "source": "constant 5 USD/BTC"}

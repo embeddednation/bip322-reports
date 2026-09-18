@@ -1,5 +1,19 @@
 # Changelog
 
+## 0.6.8 (2026-09-18)
+
+- The output files are named after their directory (`treasury-2026/
+  treasury-2026.pdf`, `.html`, `.json`, `.csv`); the default directory is
+  `LABEL-PERIOD`. The report carries its `name`.
+- Header: one line under the title with the period's times (holder and
+  chain when relevant); the blocks are in the basis section.
+- The opening balance row is set like the closing row; the UTXO page
+  heading is entirely in the heading face; the basis and procedures are
+  run-in paragraphs, neither bulleted nor numbered.
+- New section 6, how a proof of control works: coins and scripts, the
+  message and its block, the two virtual transactions, the witness as the
+  proof and its link to the scriptPubKey, verification, what it shows.
+
 ## 0.6.7 (2026-09-18)
 
 - Header: the eyebrow, the title and the period; the wallet's details and

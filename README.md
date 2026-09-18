@@ -53,8 +53,8 @@ sudo apt install libpango-1.0-0 libpangoft2-1.0-0 libharfbuzz0b   # Debian/Ubunt
 ./setup.sh --pdf                                                   # installs requirements-pdf.lock
 ```
 
-Without it `report` still writes `report.html` (print it to PDF from a browser)
-plus `report.json` and `transactions.csv`; `--pdf` then says what is missing.
+Without it `report` still writes the HTML (print it to PDF from a browser)
+plus the JSON and the CSV; `--pdf` then says what is missing.
 
 ## The flow
 
@@ -69,7 +69,7 @@ bip322-audit -w treasury snapshot --text "Proof of control {date}" --skip-proven
 
 # the year's report
 bip322-reports -w treasury report --year 2026 --ledger ledger
-#   -> report-treasury-2026/report.json, report.html, transactions.csv
+#   -> treasury-2026/treasury-2026.json, .html, .csv (and .pdf with --pdf); -o DIR names both
 ```
 
 `report` prints a summary on stderr and the directory on stdout:
@@ -166,8 +166,10 @@ The wallet is named by the node wallet's name; `--holder NAME` puts the holder's
   the period, UTXOs found on the chain, node cross-check, reconciliation)
   nothing says so beyond the figures; when one fails, an ATTENTION mark
   and a checklist with the failing item appear on the first page.
-* At the end, on a page of their own, the basis of preparation and how to
-  verify all of it independently.
+* At the end, on a page of their own, the basis of preparation, how to
+  verify all of it independently, and a plain account of how a BIP-322
+  proof of control works (the message, the two virtual transactions, the
+  witness, the verification).
 * Every movement: time, txid, kind (receive, send, internal), net, fee, the
   running balance, and for a payment the address paid.
 * How to verify all of it independently.
@@ -175,8 +177,8 @@ The wallet is named by the node wallet's name; `--holder NAME` puts the holder's
 The report names no descriptor, no xpub and no derivation path; the bundles
 it references carry none either. Bundle names are relative to the ledger.
 
-**What to hand over:** the report directory. Besides `report.html`,
-`report.json`, `transactions.csv` (and `report.pdf`) it holds `ledger/` with
+**What to hand over:** the report directory. Besides the HTML, JSON and
+CSV (and the PDF), all named after the directory, it holds `ledger/` with
 a copy of every referenced `proofs.json` under the name the report uses, so a
 reader can run `bip322-audit verify` on each. Never hand over the ledger
 itself: the bundles' PSBT files carry the wallet's xpubs. `--no-proofs`
@@ -190,7 +192,7 @@ bip322reports/period.py     a period resolved to block heights
 bip322reports/coverage.py   the ledger's bundles, re-verified; which proof backs which coin
 bip322reports/fiat.py       optional valuation from user-supplied rates
 bip322reports/report.py     the report as data, and the text summary
-bip322reports/render.py     report.html (Jinja2 template), transactions.csv, report.pdf
+bip322reports/render.py     HTML (Jinja2 template), CSV, PDF (WeasyPrint), themes, bundled fonts
 bip322reports/cli.py        the bip322-reports command
 tests/                      a fake node covering both packages' RPCs; an end-to-end test on regtest Core
 examples/reports_walkthrough.sh   the flow on a throwaway regtest node

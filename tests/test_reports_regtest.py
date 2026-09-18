@@ -170,4 +170,4 @@ def test_reports_workflow_on_regtest(core, regtest_wallet, signer_expressions, p
     out = tmp_path / "report"
     assert cli_module.main(["--cli", cli_arg, "-w", "watch", "report", "--year", "2026", "--ledger", str(ledger), "-o", str(out)]) == 0
     written = json.loads((out / "report.json").read_text())
-    assert written["ok"] and written["label"] == "watch" and (out / "report.html").exists() and (out / "transactions.csv").exists()
+    assert written["ok"] and written["label"] == "watch" and (out / "report.html").exists() and (out / "report.csv").exists()
