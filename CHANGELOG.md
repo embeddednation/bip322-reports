@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.5.1 (2026-09-18)
+
+- UTXO pages: proof of control first, then the chain's record. The lookup
+  output is terse (locked to, amount, confirmed, status).
+- Requires bip322-core 0.9.1 and bip322-audit 0.10.1.
+
 ## 0.5.0 (2026-09-18)
 
 - Section 3 lists UTXOs with the scriptPubKey each is locked to (address
