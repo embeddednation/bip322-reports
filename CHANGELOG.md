@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.6.0 (2026-09-18)
+
+- UTXO pages in colour: one thing, one colour wherever it appears on the
+  page (scriptPubKey blue, block magenta, proof violet, UTXO orange, amount
+  green; Solarized light), so the block in the message and the block of the
+  lookup match by eye and the verifymessage arguments can be told apart.
+  Commands and their output are set in terminal blocks in the same palette;
+  the page stays white.
+- UTXO pages: the timeline row is gone; the HELD line is one clause; all
+  monospace values are the same size.
+- Requires bip322-audit 0.10.3 (three-line `holdings` output).
+
 ## 0.5.5 (2026-09-18)
 
 - The on-chain lookup of each closing UTXO is made at the block named in its

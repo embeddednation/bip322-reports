@@ -139,9 +139,12 @@ The wallet is named by the node wallet's name; `--holder NAME` puts the holder's
   `bip322 verifymessage <scriptPubKey> ...` with its verdict. *On the
   chain*: `bip322 audit holdings TXID:VOUT --at <block of the proof>`, the
   block named in the proof's message, which reports the same scriptPubKey as
-  the UTXO's lock, the amount, that it was held at that block, and that it
-  is still unspent. Control and holding are thus shown at one block, and
-  "still unspent" carries the holding to the closing block. BIP-322 defines
+  the UTXO's lock, the amount, and that it was held at that block (confirmed
+  by then and unspent now). Control and holding are thus shown at one block.
+  The values a reader matches by eye are coloured alike wherever they appear
+  on the page (scriptPubKey, block, proof, UTXO, amount; the Solarized
+  palette), and the commands and their output sit in terminal blocks in the
+  same palette. BIP-322 defines
   the proof for a scriptPubKey ("the key script to be proven"); an address
   is that script encoded, which is why the statement can verify on the
   bytes themselves. A coin that arrived after its proof (a change address

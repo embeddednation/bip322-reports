@@ -4,7 +4,10 @@
 <meta charset="utf-8">
 <title>{{ r.label }} · {{ r.period.label }}</title>
 <style>
-  :root { --ink: #1b1b1b; --muted: #6b6b6b; --rule: #d6d6d6; --head: #f2f3f5; --zebra: #fafafa; --ok: #0f7a3a; --bad: #b3261e; --accent: #1f3a5f; }
+  :root { --ink: #1b1b1b; --muted: #6b6b6b; --rule: #d6d6d6; --head: #f2f3f5; --zebra: #fafafa; --ok: #0f7a3a; --bad: #b3261e; --accent: #1f3a5f;
+    /* Solarized (Ethan Schoonover), light: the terminal blocks and the values the reader matches across a page */
+    --base3: #fdf6e3; --base2: #eee8d5; --base1: #93a1a1; --base00: #657b83; --base01: #586e75;
+    --sol-yellow: #b58900; --sol-orange: #cb4b16; --sol-red: #dc322f; --sol-magenta: #d33682; --sol-violet: #6c71c4; --sol-blue: #268bd2; --sol-cyan: #2aa198; --sol-green: #859900; }
   @page {
     size: A4; margin: 22mm 16mm 20mm 16mm;
     @top-left { content: "Statement of bitcoin holdings and movements"; font: 8pt sans-serif; color: #6b6b6b; }
@@ -55,16 +58,20 @@
   table.coins tr.lead td { padding-top: 10px; border-top: 1px solid var(--rule); }
   table.coins tbody:first-of-type tr.lead td { border-top: 0; }
   table.coins td.addr { font-size: 9.5pt; } table.coins td.addr .mono { font-size: 9pt; }
+  .page table.coins td.addr, .page table.coins td.addr .mono { font-size: 8pt; }
   table.coins td.amt { font-size: 10pt; }
   table.coins td.k { color: var(--muted); font-size: 8.5pt; text-transform: uppercase; letter-spacing: 0.05em; padding-top: 6px; }
   code.msg { white-space: pre-wrap; display: block; }
   .page { break-before: page; }
   .page h2 { font-size: 10.5pt; font-family: "JetBrains Mono", Menlo, Consolas, "DejaVu Sans Mono", monospace; overflow-wrap: anywhere; word-break: break-all; }
   .page h2 .mono { font: inherit; }
-  pre { margin: 2px 0; font-family: "JetBrains Mono", Menlo, Consolas, "DejaVu Sans Mono", monospace; font-size: 7.6pt; line-height: 1.35; white-space: pre; overflow-x: hidden; }
-  pre.out { white-space: pre-wrap; overflow-wrap: anywhere; }
-  pre.cmd { background: #f2f3f5; padding: 4px 6px; border-radius: 3px; }
-  pre.out { padding: 2px 6px; border-left: 2px solid var(--rule); color: #333; }
+  pre { margin: 0; font-family: "JetBrains Mono", Menlo, Consolas, "DejaVu Sans Mono", monospace; font-size: 8pt; line-height: 1.35; white-space: pre; overflow-x: hidden; }
+  pre.out { white-space: pre-wrap; overflow-wrap: anywhere; margin-top: 4px; }
+  .term { background: var(--base3); color: var(--base00); border: 1px solid var(--base2); border-radius: 4px; padding: 5px 8px; margin: 2px 0 4px; }
+  .term .prompt { color: var(--base1); }
+  .hl-script { color: var(--sol-blue); } .hl-utxo { color: var(--sol-orange); } .hl-block { color: var(--sol-magenta); }
+  .hl-proof { color: var(--sol-violet); } .hl-amount { color: var(--sol-green); }
+  .hl-ok { color: var(--sol-green); font-weight: 700; } .hl-bad { color: var(--sol-red); font-weight: 700; }
   .badge { background: #fff; }
   .txcard .title { font-weight: 600; border-top: 2px solid var(--accent); padding-top: 4px; }
   a { color: inherit; text-decoration: none; }
@@ -78,11 +85,11 @@
 {% macro addr(a) -%}
   {% if explorer %}<a class="mono" href="{{ explorer }}/address/{{ a }}">{{ a }}</a>{% else %}<span class="mono">{{ a }}</span>{% endif %}
 {%- endmacro %}
-{% macro tx(t) -%}
-  {% if explorer %}<a class="mono" href="{{ explorer }}/tx/{{ t }}?showDetails=true">{{ t }}</a>{% else %}<span class="mono">{{ t }}</span>{% endif %}
+{% macro tx(t, role="") -%}
+  {% if explorer %}<a class="mono {{ role }}" href="{{ explorer }}/tx/{{ t }}?showDetails=true">{{ t }}</a>{% else %}<span class="mono {{ role }}">{{ t }}</span>{% endif %}
 {%- endmacro %}
-{% macro spk(hex, t) -%}
-  {% if explorer and hex %}<a class="mono" href="{{ explorer }}/tx/{{ t }}?showDetails=true">{{ hex }}</a>{% else %}<span class="mono">{{ hex or "?" }}</span>{% endif %}
+{% macro spk(hex, t, role="") -%}
+  {% if explorer and hex %}<a class="mono {{ role }}" href="{{ explorer }}/tx/{{ t }}?showDetails=true">{{ hex }}</a>{% else %}<span class="mono {{ role }}">{{ hex or "?" }}</span>{% endif %}
 {%- endmacro %}
 {% macro yesno(v) -%}{% if v %}<span class="ok">✓</span>{% else %}<span class="bad">✗</span>{% endif %}{%- endmacro %}
 <span class="meta" data-generated="{{ r.generated_utc }}" data-ref="{{ r.report_id }}"></span>
@@ -179,8 +186,8 @@
   <thead><tr><th>UTXO</th><th>Locked to (scriptPubKey)</th><th class="num">Amount</th></tr></thead>
   <tbody>
   {% for a in r.closing.addresses %}{% for o in a.outputs %}
-  <tr><td><span class="mono">{{ tx(o.txid) }}:{{ o.vout }}</span></td>
-      <td>{{ spk(a.script.script_pubkey, o.txid) }}</td>
+  <tr><td><span class="mono hl-utxo">{{ tx(o.txid, "hl-utxo") }}:{{ o.vout }}</span></td>
+      <td>{{ spk(a.script.script_pubkey, o.txid, "hl-script") }}</td>
       <td class="num">{{ o.amount_btc }}</td></tr>
   {% endfor %}{% endfor %}
   <tr class="total"><td colspan="2">Closing balance</td><td class="num">{{ r.closing.total_btc }}</td></tr>
@@ -201,18 +208,19 @@
 {% for a in r.closing.addresses %}{% for o in a.outputs %}{% set n.i = n.i + 1 %}
 <div class="page">
 <h2>4.{{ n.i }} UTXO {{ tx(o.txid) }}:{{ o.vout }}</h2>
-<p class="small muted">{{ o.amount_btc }}, received {{ o.created_utc | utc }}. First the proof that the holder controls the scriptPubKey this UTXO is locked to, dated by the block in its message; then the chain's record of the UTXO at that same block.</p>
+<p class="small muted">{{ o.amount_btc }}, received {{ o.created_utc | utc }}. First the proof that the holder controls the scriptPubKey this UTXO is locked to, dated by the block in its message; then the chain's record of the UTXO at that same block. One thing, one colour: <span class="hl-script">scriptPubKey</span>, <span class="hl-block">block</span>, <span class="hl-proof">proof</span>, <span class="hl-utxo">UTXO</span>, <span class="hl-amount">amount</span>.</p>
 <h3>Proof of control of the scriptPubKey</h3>
 <table class="coins">
   <colgroup><col style="width:11%"><col></colgroup>
   <tbody>
-  <tr class="lead"><td class="k">script</td><td class="addr">{{ spk(a.script.script_pubkey, o.txid) }}<br><span class="small muted">{{ a.script.type | upper if a.script.type else "" }}, the scriptPubKey</span></td></tr>
+  <tr class="lead"><td class="k">script</td><td class="addr">{{ spk(a.script.script_pubkey, o.txid, "hl-script") }}<br><span class="small muted">{{ a.script.type | upper if a.script.type else "" }}, the scriptPubKey</span></td></tr>
   {% if a.proof %}
-  <tr><td class="k">message</td><td><code class="msg">{{ a.proof.message }}</code></td></tr>
-  <tr><td class="k">proof</td><td><span class="mono">{{ a.proof.signature | breakable }}</span></td></tr>
+  {% set stamp = a.proof.stamp.height ~ " " ~ a.proof.stamp.hash %}
+  <tr><td class="k">message</td><td><code class="msg">{{ a.proof.message | hl([["block", stamp, "block: "]]) }}</code></td></tr>
+  <tr><td class="k">proof</td><td><span class="mono hl-proof">{{ a.proof.signature | breakable }}</span></td></tr>
   <tr class="last"><td class="k">verify</td><td>
-    <pre class="cmd">$ {{ a.proof.command }}</pre>
-    <pre class="out">{{ a.proof.output }}</pre>
+    <div class="term"><pre class="cmd"><span class="prompt">$</span> {{ a.proof.command | hl([["script", a.script.script_pubkey], ["proof", a.proof.signature], ["block", stamp, "block: "]]) }}</pre>
+    <pre class="out">{{ a.proof.output | hl([["bad", "INVALID"], ["bad", "INCONCLUSIVE"], ["ok", "VALID"]]) }}</pre></div>
     {% if a.proof.verified %}<span class="badge ok">VALID</span>{% else %}<span class="badge bad">{{ a.proof.state | upper }}</span>{% endif %}
     <span class="small muted">{{ a.proof.verifier }}{% if a.proof.after_period %} · proof made after the period's end{% endif %}{% if a.proof.before_coins == "all" %} · proof made before this UTXO was received{% elif a.proof.before_coins == "some" %} · proof made before some of the UTXOs at this script were received{% endif %}</span>
   </td></tr>
@@ -225,29 +233,22 @@
 <table class="coins">
   <colgroup><col style="width:11%"><col></colgroup>
   <tbody>
-  <tr class="lead"><td class="k">utxo</td><td class="addr"><span class="mono">{{ tx(o.txid) }}:{{ o.vout }}</span></td></tr>
+  <tr class="lead"><td class="k">utxo</td><td class="addr"><span class="mono hl-utxo">{{ tx(o.txid, "hl-utxo") }}:{{ o.vout }}</span></td></tr>
   <tr class="last"><td class="k">lookup</td><td>
     {% if o.onchain %}
-    <pre class="cmd">$ {{ o.onchain.command }}</pre>
-    <pre class="out">{{ o.onchain.output }}</pre>
-    {% if o.onchain.status == "matches" %}<span class="badge ok">HELD</span> <span class="small muted">at block {{ o.onchain.at }}, the block of the proof above: locked to the scriptPubKey proven, with the amount stated</span>
+    {% set at = o.onchain.at | string %}
+    <div class="term"><pre class="cmd"><span class="prompt">$</span> {{ o.onchain.command | hl([["utxo", o.txid ~ ":" ~ o.vout], ["block", at, "--at "]]) }}</pre>
+    <pre class="out">{{ o.onchain.output | hl([["script", a.script.script_pubkey, "locked to  "], ["amount", o.amount_btc ~ " BTC"], ["block", at, "block "]]) }}</pre></div>
+    {% if o.onchain.status == "matches" %}<span class="badge ok">HELD</span> <span class="small muted">at block {{ o.onchain.at }}, the block of the proof above</span>
     {% elif o.onchain.status == "after_proof" %}<span class="badge">AFTER THE PROOF</span> <span class="small muted">received after block {{ o.onchain.at }}, so this proof predates the UTXO; a proof dated later, for example the year-end one, closes that</span>
     {% elif o.onchain.status == "spent_since" %}<span class="badge">SPENT SINCE</span> <span class="small muted">not in the UTXO set any more; the spending transaction is in report.json</span>
     {% elif o.onchain.status == "contradicted" %}<span class="badge bad">CONTRADICTED</span> <span class="small muted">the chain disagrees with the statement</span>
     {% else %}<span class="badge">NOT RUN</span>{% endif %}
     {% else %}
-    <pre class="cmd">$ bip322 audit holdings \
-{{ o.txid }}:{{ o.vout }} --at {{ o.timeline.proof.height if o.timeline else r.period.end.height }}</pre><span class="small muted">not run when this statement was prepared</span>
+    <div class="term"><pre class="cmd"><span class="prompt">$</span> bip322 audit holdings \
+{{ o.txid }}:{{ o.vout }} --at {{ o.timeline.proof.height if o.timeline else r.period.end.height }}</pre></div><span class="small muted">not run when this statement was prepared</span>
     {% endif %}
   </td></tr>
-  {% if o.timeline %}
-  <tr class="last"><td class="k">timeline</td><td class="small">
-    received in block {{ o.timeline.received.height }} ({{ o.timeline.received.time_utc | utc }}) ·
-    proof of control dated block {{ o.timeline.proof.height }} ({{ o.timeline.proof.time_utc | utc }}) ·
-    closing block {{ o.timeline.closing.height }} ({{ o.timeline.closing.time_utc | utc }})<br>
-    <span class="muted">{% if o.timeline.held_when_proven %}Control and holding coincide at block {{ o.timeline.proof.height }}; "still unspent" in the lookup carries the holding to the closing block.{% else %}The proof predates the UTXO.{% endif %}</span>
-  </td></tr>
-  {% endif %}
   </tbody>
 </table>
 </div>
