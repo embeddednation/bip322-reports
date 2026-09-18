@@ -74,6 +74,16 @@ def build_report(
     for row in closing_rows:
         if row["proof"]:
             row["proof"]["after_period"] = int(row["proof"]["stamp"]["height"]) > period.end.height
+    for row in closing_rows:
+        row["timeline"] = None
+        if row["proof"]:
+            stamp = row["proof"]["stamp"]
+            row["timeline"] = {
+                "received": {"height": row["height"], "time_utc": created.get(row["txid"])},
+                "proof": {"height": int(stamp["height"]), "time_utc": stamp["time"]},
+                "closing": {"height": period.end.height, "time_utc": period.end.iso_time},
+                "held_when_proven": row["height"] is not None and row["height"] <= int(stamp["height"]),
+            }
     closing_addresses = _by_address(closing_rows)
     opening_addresses = _by_address([{**c.to_dict(), "created_utc": created.get(c.txid)} for c in opening])
     for a in closing_addresses:

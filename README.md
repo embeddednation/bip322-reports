@@ -24,7 +24,7 @@ One line, into a fresh venv; bip322-audit and bip322-core come along at their
 pinned tags, and the three commands land in the venv's `bin`:
 
 ```sh
-python3 -m venv ~/.bip322 && ~/.bip322/bin/pip install "bip322-reports[kernel] @ git+ssh://git@github.com/embeddednation/bip322-reports.git@v0.5.3"
+python3 -m venv ~/.bip322 && ~/.bip322/bin/pip install "bip322-reports[kernel] @ git+ssh://git@github.com/embeddednation/bip322-reports.git@v0.5.4"
 export PATH="$HOME/.bip322/bin:$PATH"
 bip322 engines && bip322-audit help && bip322-reports help
 ```
@@ -97,7 +97,7 @@ bip322-reports [--cli CMD] [-w NAME] history [-o history.json]
 bip322-reports [--cli CMD]           block WHEN
 bip322-reports [--cli CMD] [-w NAME] balance [--at WHEN | --height H] [--history FILE]
 bip322-reports [--cli CMD] [-w NAME] report (--year Y | --from WHEN --to WHEN | --from-height H --to-height H)
-                                            [--ledger DIR]... [--label NAME] [--holder NAME] [--history FILE]
+                                            [--ledger DIR]... [--holder NAME] [--history FILE]
                                             [--rates CSV | --rate N] [--currency CODE] [--explorer URL] [--pdf] [-o DIR]
 bip322-reports help [COMMAND]
 ```
@@ -125,7 +125,7 @@ totals, right-aligned tabular figures with all eight decimals, a running
 balance in the movements table, a reference number on every page, and a
 section on the basis of preparation and its limitations (point in time,
 control is not title, completeness rests on the holder's representation).
-`--holder NAME` puts the holder's name in the header.
+The wallet is named by the node wallet's name; `--holder NAME` puts the holder's name in the header.
 
 * Period: the instants asked for and the two blocks they resolved to.
 * Up front, in the style of a bank statement: opening balance, the net of

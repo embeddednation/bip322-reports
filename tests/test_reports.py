@@ -228,8 +228,6 @@ def test_cli_end_to_end_with_fake_node(tmp_path, wallet, signer_expressions, mon
                 "1012",
                 "--ledger",
                 str(ledger),
-                "--label",
-                "T",
                 "-o",
                 "out",
             ]
@@ -240,7 +238,7 @@ def test_cli_end_to_end_with_fake_node(tmp_path, wallet, signer_expressions, mon
     assert out.strip() == "out" and "RESULT: ATTENTION" in err and "proof coverage: 1/3" in err
     written = json.loads(Path("out/report.json").read_text())
     assert (
-        written["label"] == "T"
+        written["label"] == "watch"
         and not written["coverage"]["complete"]
         and Path("out/report.html").exists()
         and Path("out/transactions.csv").exists()

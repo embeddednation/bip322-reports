@@ -130,7 +130,7 @@ def cmd_report(args) -> int:
         rates = Rates.from_csv(args.currency, Path(args.rates))
     elif args.rate:
         rates = Rates.constant_rate(args.currency, args.rate)
-    label = args.label or history.wallet or "wallet"
+    label = history.wallet or "wallet"
     report = build_report(
         history,
         period,
@@ -243,7 +243,6 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument(
         "--ledger", "-l", metavar="DIR", action="append", help="directory tree of bip322-audit bundles (proofs.json); may repeat"
     )
-    p.add_argument("--label", metavar="NAME", help="how the wallet is named in the report (default: the node wallet's name)")
     p.add_argument("--holder", metavar="NAME", help="the holder of the wallet, as named in the statement's header (optional)")
     p.add_argument("--history", metavar="FILE", help="use this history.json instead of reading the node wallet")
     p.add_argument("--rates", metavar="CSV", help="date,rate rows (rate per BTC) for a fiat valuation of the movements")

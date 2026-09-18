@@ -54,8 +54,8 @@
   table.coins tbody tr.total td { border-bottom: 3px double #333; }
   table.coins tr.lead td { padding-top: 10px; border-top: 1px solid var(--rule); }
   table.coins tbody:first-of-type tr.lead td { border-top: 0; }
-  table.coins td.addr { font-size: 9.5pt; } table.coins td.addr .mono { font-size: 9.5pt; font-weight: 600; }
-  table.coins td.amt { font-size: 10.5pt; font-weight: 600; }
+  table.coins td.addr { font-size: 9.5pt; } table.coins td.addr .mono { font-size: 9pt; }
+  table.coins td.amt { font-size: 10pt; }
   table.coins td.k { color: var(--muted); font-size: 8.5pt; text-transform: uppercase; letter-spacing: 0.05em; padding-top: 6px; }
   code.msg { white-space: pre-wrap; display: block; }
   .page { break-before: page; }
@@ -122,22 +122,22 @@
 </table>
 <table class="checks">
   <colgroup><col><col style="width:56%"><col></colgroup>
-  <tr><td>{{ yesno(r.coverage.complete) }}</td><td>Every closing UTXO's scriptPubKey has a valid BIP-322 proof of control (section 4)</td>
+  <tr><td>{{ yesno(r.coverage.complete) }}</td><td>Proof of control for every closing UTXO (section 4)</td>
       <td class="num">{{ r.coverage.addresses_covered }} of {{ r.coverage.addresses_total }} scripts{% if not r.coverage.complete %} · {{ r.coverage.uncovered_btc }} without proof{% endif %}</td></tr>
   <tr><td>{% if r.period.to_tip %}<span class="muted">–</span>{% else %}{{ yesno(r.coverage.covered_after_period_count == r.coverage.total_count) }}{% endif %}</td>
-      <td>Proofs stamped after the period's end</td>
-      <td class="num">{% if r.period.to_tip %}not applicable: the period runs to the tip{% else %}{{ r.coverage.addresses_after_period }} of {{ r.coverage.addresses_total }} scripts{% endif %}</td></tr>
+      <td>Proofs dated after the period's end</td>
+      <td class="num">{% if r.period.to_tip %}n/a, the period runs to the tip{% else %}{{ r.coverage.addresses_after_period }} of {{ r.coverage.addresses_total }} scripts{% endif %}</td></tr>
   {% if r.onchain %}
   <tr><td>{% if r.onchain.error %}<span class="muted">–</span>{% elif r.onchain.contradicted %}{{ yesno(false) }}{% elif r.onchain.spent_since %}<span class="muted">–</span>{% else %}{{ yesno(true) }}{% endif %}</td>
-      <td>Each closing UTXO found on the chain, locked to that scriptPubKey with the amount stated, held at the closing block (section 4)</td>
-      <td class="num">{% if r.onchain.error %}not run{% else %}{{ r.onchain.matches }} of {{ r.onchain.outputs }} UTXOs{% if r.onchain.spent_since %} · {{ r.onchain.spent_since }} spent since{% endif %}{% if r.onchain.contradicted %} · {{ r.onchain.contradicted }} contradicted{% endif %}{% endif %}</td></tr>
+      <td>Closing UTXOs found on the chain, held at the closing block (section 4)</td>
+      <td class="num">{% if r.onchain.error %}not run{% else %}{{ r.onchain.matches }} of {{ r.onchain.outputs }}{% if r.onchain.spent_since %} · {{ r.onchain.spent_since }} spent since{% endif %}{% if r.onchain.contradicted %} · {{ r.onchain.contradicted }} contradicted{% endif %}{% endif %}</td></tr>
   {% endif %}
   {% if r.node_check %}
-  <tr><td>{% if r.node_check.ok is none %}<span class="muted">–</span>{% else %}{{ yesno(r.node_check.ok) }}{% endif %}</td><td>The wallet's unspent outputs now equal the closing UTXOs</td>
-      <td class="num">{% if r.node_check.ok is none %}not run{% else %}{{ r.node_check.listunspent_count }} listed · {{ r.node_check.closing_count }} closing{% endif %}</td></tr>
+  <tr><td>{% if r.node_check.ok is none %}<span class="muted">–</span>{% else %}{{ yesno(r.node_check.ok) }}{% endif %}</td><td>Node wallet agrees with the closing UTXOs</td>
+      <td class="num">{% if r.node_check.ok is none %}not run{% else %}{{ r.node_check.listunspent_count }} of {{ r.node_check.closing_count }}{% endif %}</td></tr>
   {% endif %}
-</table>
-<p class="small muted">Checks were run against a Bitcoin node when this statement was prepared; section 6 says how a reader repeats them. Period bounds are the last block before each instant asked for{% if r.period.start_when %} ({{ r.period.start_when }} and {{ r.period.end_when }}, UTC){% endif %}.{% if r.fiat %} Fiat values in {{ r.fiat.currency }} from {{ r.fiat.source }}.{% endif %}</p>
+</table>{% if r.fiat %}
+<p class="small muted">Fiat values in {{ r.fiat.currency }} from {{ r.fiat.source }}.</p>{% endif %}
 
 <h2>1. Holdings at the start of the period · {{ r.period.start.time_utc | utc }}</h2>
 {% if r.opening.addresses %}
@@ -239,6 +239,14 @@
 {{ o.txid }}:{{ o.vout }} --at {{ r.period.end.height }}</pre><span class="small muted">not run when this statement was prepared</span>
     {% endif %}
   </td></tr>
+  {% if o.timeline %}
+  <tr class="last"><td class="k">timeline</td><td class="small">
+    received in block {{ o.timeline.received.height }} ({{ o.timeline.received.time_utc | utc }}) ·
+    proof of control dated block {{ o.timeline.proof.height }} ({{ o.timeline.proof.time_utc | utc }}) ·
+    closing block {{ o.timeline.closing.height }} ({{ o.timeline.closing.time_utc | utc }})<br>
+    <span class="muted">{% if o.timeline.held_when_proven %}The UTXO was already held when the proof was made; control of a scriptPubKey does not lapse, so the proof covers it at the closing block.{% else %}The proof predates the UTXO: control of the scriptPubKey was shown before the coins arrived, and it does not lapse.{% endif %}{% if o.timeline.proof.height < o.timeline.closing.height %} A proof dated after the closing block, made on request, shows control at that time directly.{% endif %}</span>
+  </td></tr>
+  {% endif %}
   </tbody>
 </table>
 </div>

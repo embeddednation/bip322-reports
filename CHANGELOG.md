@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.5.4 (2026-09-18)
+
+- The statement is named after the node wallet; `--label` is gone.
+- The checks are four short lines; the paragraph beneath them is gone.
+- UTXO pages: no bold; a timeline line under the lookup: received, proof
+  dated, closing block, and what that order means for the proof.
+
 ## 0.5.3 (2026-09-18)
 
 - UTXO pages: no address line; the scriptPubKey and the UTXO are set alike,
