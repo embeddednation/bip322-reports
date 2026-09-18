@@ -13,7 +13,8 @@ from bip322audit.holdings import format_holdings, holdings, holdings_command
 from bip322audit.rpc import BitcoinCli, RpcError, btc
 from bip322core.cli import format_address_text, format_verify_text
 from bip322core.core import BIP322Error
-from bip322core.verify import describe_address
+from bip322core.engines import EngineError, available_engines
+from bip322core.verify import describe_address, verify_message
 
 from . import TOOL
 from .coverage import cover_coins, load_ledger, pending_bundles
@@ -76,10 +77,9 @@ def build_report(
     closing_addresses = _by_address(closing_rows)
     opening_addresses = _by_address([{**c.to_dict(), "created_utc": created.get(c.txid)} for c in opening])
     for a in closing_addresses:
-        if a["proof"]:
-            a["proof"]["command"] = shell_command(["bip322", "verifymessage", a["address"], a["proof"]["signature"], a["proof"]["message"]])
-            a["proof"]["output"] = format_verify_text(a["proof"]["verdict"]) if a["proof"].get("verdict") else "(not verified)"
         a["script"] = _address_step(a["address"])
+        if a["proof"]:
+            _verify_by_script(a, engines)
     onchain_result = _onchain(cli, closing_rows, period, progress) if cli is not None and onchain and closing_rows else None
     uncovered = [r for r in closing_rows if not (r["proof"] and r["proof"]["verified"])]
     after_period = sum(1 for r in closing_rows if r["proof"] and r["proof"]["verified"] and r["proof"]["after_period"])
@@ -254,17 +254,38 @@ def shell_command(argv: list[str]) -> str:
 
 
 def _address_step(address: str) -> dict:
-    """The address opened into its scriptPubKey: the script the proof is for and the outputs are locked to.
-
-    ``bip322 validateaddress`` prints it; the statement quotes it and compares
-    the bytes with what the node reports for each output.
-    """
+    """The address opened into its scriptPubKey: the script the proof is for and the outputs are locked to."""
     argv = ["bip322", "validateaddress", address]
     try:
         info = describe_address(address)
     except (BIP322Error, ValueError) as exc:
         return {"command": shell_words(argv), "output": f"(cannot decode: {exc})", "script_pubkey": None, "type": None}
     return {"command": shell_words(argv), "output": format_address_text(info), "script_pubkey": info["scriptPubKey"], "type": info["type"]}
+
+
+def _verify_by_script(a: dict, engines) -> None:
+    """Verify the proof against the scriptPubKey bytes, and keep that command and its output for the statement.
+
+    The bundle's own verification used the address; BIP-322 proves the
+    scriptPubKey, so the statement runs the verifier on the bytes the chain
+    reports for the UTXO and quotes exactly that.
+    """
+    spk = a["script"]["script_pubkey"] or a["address"]
+    proof = a["proof"]
+    message = bytes.fromhex(proof["message_hex"]) if proof.get("message_hex") else proof["message"].encode("utf-8")
+    try:
+        result = verify_message(spk, proof["signature"], message, engines=engines or available_engines())
+        verdict = result.to_dict()
+        proof["state"], proof["verified"] = verdict["state"], verdict["state"] == "valid" and proof["verified"]
+    except EngineError as exc:
+        verdict = None
+        proof["output"] = f"(not verified: {exc})"
+    proof["command"] = shell_command(["bip322", "verifymessage", spk, proof["signature"], proof["message"]])
+    if verdict:
+        proof["output"] = format_verify_text(verdict)
+        proof["verifier"] = verdict.get("tool")
+        proof["engines"] = [f"{e['engine']} {e.get('version') or ''}".strip() for e in verdict.get("engines", []) if e.get("ok")]
+    proof["script_pubkey"] = spk
 
 
 def _onchain(cli: BitcoinCli, closing_rows: list[dict], period: Period, progress=None) -> dict:

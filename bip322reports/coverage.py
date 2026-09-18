@@ -101,6 +101,7 @@ class Cover:
         return {
             "bundle": self.bundle.name,
             "message": self.bundle.message,
+            "message_hex": self.bundle.document.get("message_hex"),
             "stamp": self.bundle.stamp,
             "address": self.address,
             "signature": self.signature,

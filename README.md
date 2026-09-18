@@ -24,7 +24,7 @@ One line, into a fresh venv; bip322-audit and bip322-core come along at their
 pinned tags, and the three commands land in the venv's `bin`:
 
 ```sh
-python3 -m venv ~/.bip322 && ~/.bip322/bin/pip install "bip322-reports[kernel] @ git+ssh://git@github.com/embeddednation/bip322-reports.git@v0.4.4"
+python3 -m venv ~/.bip322 && ~/.bip322/bin/pip install "bip322-reports[kernel] @ git+ssh://git@github.com/embeddednation/bip322-reports.git@v0.5.0"
 export PATH="$HOME/.bip322/bin:$PATH"
 bip322 engines && bip322-audit help && bip322-reports help
 ```
@@ -130,18 +130,18 @@ control is not title, completeness rests on the holder's representation).
 * Period: the instants asked for and the two blocks they resolved to.
 * Summary: opening and closing balance, received, sent, fees, net, the
   reconciliation, the proof coverage, the node cross-check.
-* Holdings at the start of the period, and at the end: the wallet's unspent
-  outputs with the address each is locked to, then one page per address in
-  three steps, each a pasteable command with what it printed. *Address and
-  scriptPubKey*: `bip322 validateaddress ADDRESS` opens the address into the
-  script it stands for. *Proof of control*: message, proof, and `bip322
-  verifymessage ...` with its verdict. *On the chain*, per output: `bip322
-  audit holdings TXID:VOUT --at <closing block>`, which reports the
-  scriptPubKey the output is locked to, the amount, and that it was held at
-  the closing block. A BIP-322 proof is made for a scriptPubKey; an address
-  is that script encoded; an output is locked to one; the page shows they
-  are the same bytes. A proof is per address, so one made before the coins
-  arrived (a change address proven before the spend) covers them; the
+* Holdings at the start of the period, and at the end: the wallet's UTXOs
+  with the scriptPubKey each is locked to (and its address encoding), then
+  one page per UTXO in two steps, each a pasteable command with what it
+  printed. *On the chain*: `bip322 audit holdings TXID:VOUT --at <closing
+  block>` reports the scriptPubKey the UTXO is locked to, the amount, and
+  that it was held at the closing block. *Proof of control of the
+  scriptPubKey*: message, proof, and `bip322 verifymessage <scriptPubKey>
+  ...` with its verdict, run on the very bytes the lookup reported. BIP-322
+  defines the proof for a scriptPubKey ("the key script to be proven"); an
+  address is that script encoded, which is why the statement can verify on
+  the bytes themselves. A proof covers every UTXO paid to its script, before
+  or after the proof (a change address proven before the spend); the
   statement says when that is the case.
 * Every movement: time, txid, kind (receive, send, internal), net, fee, the
   running balance, and for a payment the address paid.

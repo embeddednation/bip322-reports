@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.5.0 (2026-09-18)
+
+- Section 3 lists UTXOs with the scriptPubKey each is locked to (address
+  beneath, as its encoding). Section 4 is one page per UTXO: the on-chain
+  lookup, then the proof verified with `bip322 verifymessage <scriptPubKey>`
+  on the bytes the lookup reported, quoted with its output. The statement
+  re-verifies each proof that way when prepared.
+- Requires bip322-core 0.9.0 and bip322-audit 0.10.0.
+
 ## 0.4.4 (2026-09-17)
 
 - Section 3 lists the unspent outputs with the address each is locked to.
