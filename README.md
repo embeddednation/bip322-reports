@@ -24,7 +24,7 @@ One line, into a fresh venv; bip322-audit and bip322-core come along at their
 pinned tags, and the three commands land in the venv's `bin`:
 
 ```sh
-python3 -m venv ~/.bip322 && ~/.bip322/bin/pip install "bip322-reports[kernel] @ git+ssh://git@github.com/embeddednation/bip322-reports.git@v0.5.1"
+python3 -m venv ~/.bip322 && ~/.bip322/bin/pip install "bip322-reports[kernel] @ git+ssh://git@github.com/embeddednation/bip322-reports.git@v0.5.2"
 export PATH="$HOME/.bip322/bin:$PATH"
 bip322 engines && bip322-audit help && bip322-reports help
 ```
@@ -128,8 +128,10 @@ control is not title, completeness rests on the holder's representation).
 `--holder NAME` puts the holder's name in the header.
 
 * Period: the instants asked for and the two blocks they resolved to.
-* Summary: opening and closing balance, received, sent, fees, net, the
-  reconciliation, the proof coverage, the node cross-check.
+* Up front, in the style of a bank statement: opening balance, the net of
+  the period's transactions, closing balance, and the difference between
+  them, which must be zero; then a short list of checks (proofs valid,
+  stamped after the period, UTXOs found on the chain, node cross-check).
 * Holdings at the start of the period, and at the end: the wallet's UTXOs
   with the scriptPubKey each is locked to (and its address encoding), then
   one page per UTXO in two steps, each a pasteable command with what it

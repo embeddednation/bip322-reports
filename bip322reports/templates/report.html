@@ -78,7 +78,10 @@
   {% if explorer %}<a class="mono" href="{{ explorer }}/address/{{ a }}">{{ a }}</a>{% else %}<span class="mono">{{ a }}</span>{% endif %}
 {%- endmacro %}
 {% macro tx(t) -%}
-  {% if explorer %}<a class="mono" href="{{ explorer }}/tx/{{ t }}">{{ t }}</a>{% else %}<span class="mono">{{ t }}</span>{% endif %}
+  {% if explorer %}<a class="mono" href="{{ explorer }}/tx/{{ t }}?showDetails=true">{{ t }}</a>{% else %}<span class="mono">{{ t }}</span>{% endif %}
+{%- endmacro %}
+{% macro spk(hex, t) -%}
+  {% if explorer and hex %}<a class="mono" href="{{ explorer }}/tx/{{ t }}?showDetails=true">{{ hex }}</a>{% else %}<span class="mono">{{ hex or "?" }}</span>{% endif %}
 {%- endmacro %}
 {% macro yesno(v) -%}{% if v %}<span class="ok">✓</span>{% else %}<span class="bad">✗</span>{% endif %}{%- endmacro %}
 <span class="meta" data-generated="{{ r.generated_utc }}" data-ref="{{ r.report_id }}"></span>
@@ -100,35 +103,40 @@
 </table>
 
 <div class="tiles">
-  <div class="tile"><div class="k">Opening balance</div><div class="v">{{ r.opening.total_btc }}</div><div class="s">{{ r.opening.coins | length }} outputs · {{ r.period.start.time_utc[:10] }}</div></div>
-  <div class="tile"><div class="k">Closing balance</div><div class="v">{{ r.closing.total_btc }}</div><div class="s">{{ r.closing.coins | length }} outputs · {{ r.period.end.time_utc[:10] }}</div></div>
-  <div class="tile"><div class="k">Net change</div><div class="v">{{ r.totals.net_btc | acct }}</div><div class="s">{{ r.totals.transactions }} transactions · fees {{ r.totals.fees_btc }}</div></div>
-  <div class="tile"><div class="k">Proven</div><div class="v">{{ r.coverage.covered_count }} / {{ r.coverage.total_count }}</div><div class="s">closing outputs · {{ r.coverage.covered_btc }}</div></div>
+  <div class="tile"><div class="k">Opening balance</div><div class="v">{{ r.opening.total_btc }}</div><div class="s">{{ r.opening.coins | length }} UTXOs · {{ r.period.start.time_utc[:10] }}</div></div>
+  <div class="tile"><div class="k">Transactions</div><div class="v">{{ r.totals.net_btc | acct }}</div><div class="s">net of {{ r.totals.transactions }} transactions, fees included</div></div>
+  <div class="tile"><div class="k">Closing balance</div><div class="v">{{ r.closing.total_btc }}</div><div class="s">{{ r.closing.coins | length }} UTXOs · {{ r.period.end.time_utc[:10] }}</div></div>
+  <div class="tile"><div class="k">Difference</div><div class="v {% if r.reconciliation.ok %}ok{% else %}bad{% endif %}">{{ r.reconciliation.diff_sat | btc | acct }}</div><div class="s">closing − opening − transactions</div></div>
 </div>
 
-<h2>Assertion and checks</h2>
-<p>The holder asserts that the wallet held the outputs listed in sections 3 and 4 as of {{ r.period.end.time_utc | utc }} (block {{ r.period.end.height }}), controls the keys behind each of their addresses, and that the movements in section 2 are all of the wallet's transactions in the period. The checks below were run against a Bitcoin node when this statement was prepared; section 6 describes how a reader repeats them.</p>
+<h2>Reconciliation and checks</h2>
+<table class="kv">
+  <colgroup><col style="width:56%"><col></colgroup>
+  <tbody>
+  <tr><td>Opening balance, {{ r.period.start.time_utc | utc }}</td><td class="num">{{ r.opening.total_btc }}</td></tr>
+  <tr><td>Net of the {{ r.totals.transactions }} transactions in the period (section 2)</td><td class="num">{{ r.totals.net_btc | acct }}</td></tr>
+  <tr><td>Closing balance, {{ r.period.end.time_utc | utc }} (section 3)</td><td class="num">{{ r.closing.total_btc }}</td></tr>
+  <tr class="total"><td>Difference</td><td class="num">{% if r.reconciliation.ok %}<span class="ok">{{ r.reconciliation.diff_sat | btc }}</span>{% else %}<span class="bad">{{ r.reconciliation.diff_sat | btc | acct }}</span>{% endif %}</td></tr>
+  </tbody>
+</table>
 <table class="checks">
   <colgroup><col><col style="width:56%"><col></colgroup>
-  <tr><td>{{ yesno(r.reconciliation.ok) }}</td><td>Opening balance + net change = closing balance</td>
-      <td class="num">{{ r.opening.total_btc }} + {{ r.totals.net_btc | acct }} = {{ r.closing.total_btc }}{% if not r.reconciliation.ok %} (off by {{ r.reconciliation.diff_sat | btc }}){% endif %}</td></tr>
-  <tr><td>{{ yesno(r.coverage.complete) }}</td><td>Every scriptPubKey holding coins at the end of the period has a verified BIP-322 proof of control (section 4)</td>
+  <tr><td>{{ yesno(r.coverage.complete) }}</td><td>Every closing UTXO's scriptPubKey has a valid BIP-322 proof of control (section 4)</td>
       <td class="num">{{ r.coverage.addresses_covered }} of {{ r.coverage.addresses_total }} scripts{% if not r.coverage.complete %} · {{ r.coverage.uncovered_btc }} without proof{% endif %}</td></tr>
   <tr><td>{% if r.period.to_tip %}<span class="muted">–</span>{% else %}{{ yesno(r.coverage.covered_after_period_count == r.coverage.total_count) }}{% endif %}</td>
-      <td>Proofs stamped after the period's end (control demonstrated after the closing block)</td>
+      <td>Proofs stamped after the period's end</td>
       <td class="num">{% if r.period.to_tip %}not applicable: the period runs to the tip{% else %}{{ r.coverage.addresses_after_period }} of {{ r.coverage.addresses_total }} scripts{% endif %}</td></tr>
   {% if r.onchain %}
   <tr><td>{% if r.onchain.error %}<span class="muted">–</span>{% elif r.onchain.contradicted %}{{ yesno(false) }}{% elif r.onchain.spent_since %}<span class="muted">–</span>{% else %}{{ yesno(true) }}{% endif %}</td>
-      <td>On chain: each closing UTXO is locked to the scriptPubKey stated, with the amount stated, and was held at the closing block (section 4)</td>
-      <td class="num">{% if r.onchain.error %}not run{% else %}{{ r.onchain.matches }} of {{ r.onchain.outputs }} outputs{% if r.onchain.spent_since %} · {{ r.onchain.spent_since }} spent since{% endif %}{% if r.onchain.contradicted %} · {{ r.onchain.contradicted }} contradicted{% endif %}{% endif %}</td></tr>
+      <td>Each closing UTXO found on the chain, locked to that scriptPubKey with the amount stated, held at the closing block (section 4)</td>
+      <td class="num">{% if r.onchain.error %}not run{% else %}{{ r.onchain.matches }} of {{ r.onchain.outputs }} UTXOs{% if r.onchain.spent_since %} · {{ r.onchain.spent_since }} spent since{% endif %}{% if r.onchain.contradicted %} · {{ r.onchain.contradicted }} contradicted{% endif %}{% endif %}</td></tr>
   {% endif %}
   {% if r.node_check %}
-  <tr><td>{% if r.node_check.ok is none %}<span class="muted">–</span>{% else %}{{ yesno(r.node_check.ok) }}{% endif %}</td><td>Node cross-check: the wallet's unspent outputs now equal the closing outputs</td>
+  <tr><td>{% if r.node_check.ok is none %}<span class="muted">–</span>{% else %}{{ yesno(r.node_check.ok) }}{% endif %}</td><td>The wallet's unspent outputs now equal the closing UTXOs</td>
       <td class="num">{% if r.node_check.ok is none %}not run{% else %}{{ r.node_check.listunspent_count }} listed · {{ r.node_check.closing_count }} closing{% endif %}</td></tr>
   {% endif %}
-  <tr><td>{{ yesno(r.bundles | selectattr("verified") | list | length == r.bundles | length) }}</td><td>Proof files verified against the node (every signature, every stamp block)</td>
-      <td class="num">{{ r.bundles | selectattr("verified") | list | length }} of {{ r.bundles | length }}</td></tr>
 </table>
+<p class="small muted">Checks were run against a Bitcoin node when this statement was prepared; section 6 says how a reader repeats them. Period bounds are the last block before each instant asked for{% if r.period.start_when %} ({{ r.period.start_when }} and {{ r.period.end_when }}, UTC){% endif %}.{% if r.fiat %} Fiat values in {{ r.fiat.currency }} from {{ r.fiat.source }}.{% endif %}</p>
 
 <h2>1. Holdings at the start of the period · {{ r.period.start.time_utc | utc }}</h2>
 {% if r.opening.addresses %}
@@ -164,18 +172,17 @@
 {% else %}<p class="muted">No transactions in the period; the closing balance equals the opening balance.</p>{% endif %}
 
 <h2>3. Holdings at the end of the period · {{ r.period.end.time_utc | utc }}</h2>
-<p class="small muted">Coins exist on the chain as unspent transaction outputs, UTXOs: each is a fixed amount locked to one script, its scriptPubKey, until it is spent. An address is a scriptPubKey, checksummed and encoded for people. The wallet's UTXOs at the end of the period:</p>
+<p class="small muted">Coins exist on the chain as unspent transaction outputs, UTXOs: each is a fixed amount locked to one script, its scriptPubKey, until it is spent. The wallet's UTXOs at the end of the period; each link opens the transaction with the output's scriptPubKey shown:</p>
 <table>
-  <colgroup><col style="width:40%"><col><col style="width:11%"><col class="w-btc"></colgroup>
-  <thead><tr><th>UTXO</th><th>Locked to (scriptPubKey · address)</th><th>Control</th><th class="num">Amount</th></tr></thead>
+  <colgroup><col style="width:44%"><col><col class="w-btc"></colgroup>
+  <thead><tr><th>UTXO</th><th>Locked to (scriptPubKey)</th><th class="num">Amount</th></tr></thead>
   <tbody>
   {% for a in r.closing.addresses %}{% for o in a.outputs %}
   <tr><td><span class="mono">{{ tx(o.txid) }}:{{ o.vout }}</span></td>
-      <td><span class="mono">{{ a.script.script_pubkey or "?" }}</span><br><span class="small muted">{{ addr(a.address) }}</span></td>
-      <td>{% if a.proof and a.proof.verified %}<span class="ok">proven</span>{% elif a.proof %}<span class="bad">{{ a.proof.state }}</span>{% else %}<span class="bad">no proof</span>{% endif %}</td>
+      <td>{{ spk(a.script.script_pubkey, o.txid) }}</td>
       <td class="num">{{ o.amount_btc }}</td></tr>
   {% endfor %}{% endfor %}
-  <tr class="total"><td colspan="3">Closing balance · {{ r.coverage.covered_btc }} with proof of control</td><td class="num">{{ r.closing.total_btc }}</td></tr>
+  <tr class="total"><td colspan="2">Closing balance</td><td class="num">{{ r.closing.total_btc }}</td></tr>
   </tbody>
 </table>
 <p class="small muted">One page per UTXO follows: the proof that the holder controls the scriptPubKey the UTXO is locked to, then the chain's record of the UTXO. BIP-322 defines the proof for a scriptPubKey ("the key script to be proven"); the verification is run on those bytes, and the chain names the same bytes. The explorer link on each UTXO leads to the same record.</p>

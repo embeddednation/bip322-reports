@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.5.2 (2026-09-18)
+
+- Front page: opening balance, transactions, closing balance and the
+  difference as the four figures and a reconciliation table; the checks are
+  a short list without the assertion paragraph. Table 3 lists each UTXO with
+  its scriptPubKey only, linked to the transaction with details expanded
+  (`?showDetails=true`), where the explorer shows that scriptPubKey.
+
 ## 0.5.1 (2026-09-18)
 
 - UTXO pages: proof of control first, then the chain's record. The lookup
