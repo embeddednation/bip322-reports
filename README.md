@@ -125,7 +125,7 @@ totals, right-aligned tabular figures with all eight decimals, a running
 balance in the movements table, a reference number on every page, and a
 section on the basis of preparation and its limitations (point in time,
 control is not title, completeness rests on the holder's representation).
-The wallet is named by the node wallet's name; `--holder NAME` puts the holder's name in the header.
+The wallet is named by the node wallet's name; `--holder NAME` puts the holder's name in the header. Sections 1 and 2 are kept whole when they fit on a page.
 
 * Period: the instants asked for and the two blocks they resolved to.
 * First, in the style of a bank statement, the movements: opening balance,
@@ -162,9 +162,12 @@ The wallet is named by the node wallet's name; `--holder NAME` puts the holder's
   bytes themselves. A coin that arrived after its proof (a change address
   proven before the spend) is marked so; the year-end bundle gives it a
   proof dated after it.
-* At the end, the reconciliation figures and the checks (proofs valid,
-  stamped after the period, UTXOs found on the chain, node cross-check),
-  the basis of preparation, and how to verify all of it independently.
+* Exceptions only: when every check passes (proofs valid, stamped after
+  the period, UTXOs found on the chain, node cross-check, reconciliation)
+  nothing says so beyond the figures; when one fails, an ATTENTION mark
+  and a checklist with the failing item appear on the first page.
+* At the end, on a page of their own, the basis of preparation and how to
+  verify all of it independently.
 * Every movement: time, txid, kind (receive, send, internal), net, fee, the
   running balance, and for a payment the address paid.
 * How to verify all of it independently.

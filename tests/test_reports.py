@@ -137,7 +137,7 @@ def test_report_backs_every_closing_coin_with_a_verified_proof(tmp_path, wallet,
     html = render_html(report)
     assert (
         "Treasury" in html
-        and "pill ok" in html
+        and "pill bad" not in html
         and "0.63900000" in html
         and "Owner proof" in html
         and 'href="https://mempool.space/tx/' in html

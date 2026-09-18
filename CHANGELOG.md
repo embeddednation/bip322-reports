@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.6.7 (2026-09-18)
+
+- Header: the eyebrow, the title and the period; the wallet's details and
+  the preparation line moved to the basis section (4). No OK mark: an
+  ATTENTION mark and the checklist appear on the first page only when a
+  check fails, and the checks section (former 4) is gone otherwise.
+- Sections 1 and 2 are kept whole when they fit on a page; the basis and
+  the procedures start on a new page after the last UTXO page.
+- The UTXO page heading is set in the heading face, the identifier in the
+  mono face. The eyebrow is red in the economist theme (it was overridden).
+
 ## 0.6.6 (2026-09-18)
 
 - A calmer first page: title, wallet, period, prepared; then the movements

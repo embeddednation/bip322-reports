@@ -157,7 +157,7 @@ def test_reports_workflow_on_regtest(core, regtest_wallet, signer_expressions, p
     assert change_row["proof"]["before_output"] and not change_row["proof"]["lists_output"]
     assert report["node_check"]["ok"] and report["reconciliation"]["ok"]
     html = render_html(report)
-    assert "pill ok" in html and spend_txid in html
+    assert "pill bad" not in html and spend_txid in html
 
     # ---- a sub-period: only the spend, opening balance from before it ----------- #
     part = build_report(history, period_for_heights(watch, 103, 105), label="regtest", ledger_roots=[ledger], cli=watch)

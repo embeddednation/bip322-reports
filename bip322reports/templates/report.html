@@ -37,11 +37,10 @@
   {% elif t.heading == "redrule" %}
   h2 { color: var(--strong); border-bottom: 1px solid {{ red }}; }
   {% endif %}
-  {% if t.tab %}.eyebrow { color: {{ t.tab }}; }{% endif %}
   h3 { font-size: 10pt; margin: 14px 0 4px; color: var(--strong); break-after: avoid; }
   p { margin: 4px 0 8px; }
   strong { color: var(--strong); }
-  .eyebrow { font-size: 8pt; letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted); margin: 0 0 6px; font-weight: 600; }
+  .eyebrow { font-size: 8pt; letter-spacing: 0.12em; text-transform: uppercase; color: {{ t.tab or "var(--muted)" }}; margin: 0 0 6px; font-weight: 600; }
   .muted { color: var(--muted); }
   .small { font-size: 8pt; }
   .head { display: table; width: 100%; margin-bottom: 8px; }
@@ -83,8 +82,10 @@
   table.coins td.k { color: var(--muted); font-size: 8pt; padding-top: 6px; overflow-wrap: normal; }
   code.msg, .sig { white-space: pre-wrap; display: block; line-height: 1.35; }
   .page { break-before: page; }
-  .page h2 { font-size: 10pt; font-family: var(--font-mono); overflow-wrap: anywhere; word-break: break-all; }
-  .page h2 .mono { font: inherit; }
+  .keep { break-inside: avoid; }
+  h2.attention { color: var(--bad); border-color: var(--bad); }
+  .page h2 { font-size: 11pt; overflow-wrap: anywhere; word-break: break-all; }
+  .page h2 .mono { font-family: var(--font-mono); font-size: 9pt; font-weight: 700; }
   pre { margin: 0; font-family: var(--font-mono); font-size: 7.5pt; line-height: 1.35; white-space: pre; overflow-x: hidden; }
   pre.out { white-space: pre-wrap; overflow-wrap: anywhere; margin-top: 4px; }
   .term { color: var(--term-ink); padding: 3px 0 2px; margin: 0 0 2px; }
@@ -118,16 +119,46 @@
     <p class="eyebrow">Statement of bitcoin holdings and movements</p>
     <h1>{{ r.label }} · {{ r.period.label }}</h1>
   </div>
-  <div class="result">{% if r.ok %}<span class="pill ok">OK</span>{% else %}<span class="pill bad">ATTENTION</span>{% endif %}</div>
+  <div class="result">{% if not r.ok %}<span class="pill bad">ATTENTION</span>{% endif %}</div>
 </div>
 <table class="facts">
   <colgroup><col><col></colgroup>
   {% if r.holder %}<tr><td>Holder</td><td>{{ r.holder }}</td></tr>{% endif %}
-  <tr><td>Wallet</td><td>{{ r.label }} · {{ r.chain }} chain{% if r.policy %} · addresses controlled by {{ r.policy }} keys{% endif %}</td></tr>
-  <tr><td>Period</td><td>from {{ r.period.start.time_utc | utc }} (block {{ r.period.start.height }}) to {{ r.period.end.time_utc | utc }} (block {{ r.period.end.height }}){% if r.period.to_tip %}, the chain tip when this statement was prepared{% endif %}. Opening figures are as of the first block, closing figures as of the second.</td></tr>
-  <tr><td>Prepared</td><td>{{ r.generated_utc | utc }} by {{ r.tool }} · reference {{ r.report_id }}</td></tr>
+  <tr><td>Period</td><td>{{ r.period.start.time_utc | utc }}, block {{ r.period.start.height }}, to {{ r.period.end.time_utc | utc }}, block {{ r.period.end.height }}{% if r.period.to_tip %}, the chain tip{% endif %}{% if r.chain != "main" %} · {{ r.chain }} chain{% endif %}</td></tr>
 </table>
 
+{% if not r.ok %}
+<h2 class="attention">Attention</h2>
+<p class="small">Not every check passed; the failing ones are marked below, and the section concerned says more.</p>
+<table class="kv">
+  <colgroup><col style="width:56%"><col></colgroup>
+  <tbody>
+  <tr><td>Opening balance, {{ r.period.start.time_utc | utc }}</td><td class="num">{{ r.opening.total_btc }}</td></tr>
+  <tr><td>Net of the {{ r.totals.transactions }} transactions in the period (section 1)</td><td class="num">{{ r.totals.net_btc | acct }}</td></tr>
+  <tr><td>Closing balance, {{ r.period.end.time_utc | utc }} (section 2)</td><td class="num">{{ r.closing.total_btc }}</td></tr>
+  <tr class="total"><td>Difference</td><td class="num">{% if r.reconciliation.ok %}<span class="ok">{{ r.reconciliation.diff_sat | btc }}</span>{% else %}<span class="bad">{{ r.reconciliation.diff_sat | btc | acct }}</span>{% endif %}</td></tr>
+  </tbody>
+</table>
+<table class="checks">
+  <colgroup><col><col style="width:56%"><col></colgroup>
+  <tr><td>{{ yesno(r.coverage.complete) }}</td><td>Proof of control for every closing UTXO (section 3)</td>
+      <td class="num">{{ r.coverage.addresses_covered }} of {{ r.coverage.addresses_total }} scripts{% if not r.coverage.complete %} · {{ r.coverage.uncovered_btc }} without proof{% endif %}</td></tr>
+  <tr><td>{% if r.period.to_tip %}<span class="muted">–</span>{% else %}{{ yesno(r.coverage.covered_after_period_count == r.coverage.total_count) }}{% endif %}</td>
+      <td>Proofs dated after the period's end</td>
+      <td class="num">{% if r.period.to_tip %}n/a, the period runs to the tip{% else %}{{ r.coverage.addresses_after_period }} of {{ r.coverage.addresses_total }} scripts{% endif %}</td></tr>
+  {% if r.onchain %}
+  <tr><td>{% if r.onchain.error %}<span class="muted">–</span>{% elif r.onchain.contradicted %}{{ yesno(false) }}{% elif r.onchain.spent_since or r.onchain.after_proof %}<span class="muted">–</span>{% else %}{{ yesno(true) }}{% endif %}</td>
+      <td>Closing UTXOs found on the chain at the block of their proof (section 3)</td>
+      <td class="num">{% if r.onchain.error %}not run{% else %}{{ r.onchain.matches }} of {{ r.onchain.outputs }}{% if r.onchain.after_proof %} · {{ r.onchain.after_proof }} received after the proof{% endif %}{% if r.onchain.spent_since %} · {{ r.onchain.spent_since }} spent since{% endif %}{% if r.onchain.contradicted %} · {{ r.onchain.contradicted }} contradicted{% endif %}{% endif %}</td></tr>
+  {% endif %}
+  {% if r.node_check %}
+  <tr><td>{% if r.node_check.ok is none %}<span class="muted">–</span>{% else %}{{ yesno(r.node_check.ok) }}{% endif %}</td><td>Node wallet agrees with the closing UTXOs</td>
+      <td class="num">{% if r.node_check.ok is none %}not run{% else %}{{ r.node_check.listunspent_count }} of {{ r.node_check.closing_count }}{% endif %}</td></tr>
+  {% endif %}
+</table>
+{% endif %}
+
+<div class="keep">
 <h2><span class="n">1.</span> Movements in the period</h2>
 {% if r.transactions %}
 <table>
@@ -149,7 +180,9 @@
 </table>
 <p class="small muted">Received {{ r.totals.received_btc }} · paid out {{ r.totals.sent_btc }} · fees {{ r.totals.fees_btc }}.{% if r.reconciliation.ok %} The opening balance plus the net of the transactions meets the holdings on the chain at the closing block; difference {{ r.reconciliation.diff_sat | btc }}.{% endif %} Net is what the wallet received minus what it spent, fees included; "internal" moves coins between the wallet's own addresses and costs only the fee.{% if r.fiat %} {{ r.fiat.currency }} at the rate in force on the transaction's day.{% endif %}</p>
 {% else %}<p class="muted">No transactions in the period: the closing balance, {{ r.closing.total_btc }}, equals the opening balance{% if not r.reconciliation.ok %} <span class="bad">but the holdings on the chain differ by {{ r.reconciliation.diff_sat | btc | acct }}</span>{% endif %}.</p>{% endif %}
+</div>
 
+<div class="keep">
 <h2><span class="n">2.</span> Holdings at the end of the period · {{ r.period.end.time_utc | utc }}</h2>
 <p class="small muted">Coins exist on the chain as unspent transaction outputs, UTXOs: each is a fixed amount locked to one script, its scriptPubKey, until it is spent. The wallet's UTXOs at the end of the period; each link opens the transaction with the output's scriptPubKey shown:</p>
 <table>
@@ -174,6 +207,7 @@
 {% if r.pending_transactions %}
 <p class="small muted">Unconfirmed transactions, in no balance: {% for t in r.pending_transactions %}{{ tx(t.txid) }} ({{ t.kind }}, {{ t.net_btc | acct }}){% if not loop.last %}, {% endif %}{% endfor %}.</p>
 {% endif %}
+</div>
 
 {% set n = namespace(i=0) %}
 {% for a in r.closing.addresses %}{% for o in a.outputs %}{% set n.i = n.i + 1 %}
@@ -223,39 +257,12 @@
 </div>
 {% endfor %}{% endfor %}
 
-<h2><span class="n">4.</span> Reconciliation and checks</h2>
-<table class="kv">
-  <colgroup><col style="width:56%"><col></colgroup>
-  <tbody>
-  <tr><td>Opening balance, {{ r.period.start.time_utc | utc }}</td><td class="num">{{ r.opening.total_btc }}</td></tr>
-  <tr><td>Net of the {{ r.totals.transactions }} transactions in the period (section 1)</td><td class="num">{{ r.totals.net_btc | acct }}</td></tr>
-  <tr><td>Closing balance, {{ r.period.end.time_utc | utc }} (section 2)</td><td class="num">{{ r.closing.total_btc }}</td></tr>
-  <tr class="total"><td>Difference</td><td class="num">{% if r.reconciliation.ok %}<span class="ok">{{ r.reconciliation.diff_sat | btc }}</span>{% else %}<span class="bad">{{ r.reconciliation.diff_sat | btc | acct }}</span>{% endif %}</td></tr>
-  </tbody>
-</table>
-<table class="checks">
-  <colgroup><col><col style="width:56%"><col></colgroup>
-  <tr><td>{{ yesno(r.coverage.complete) }}</td><td>Proof of control for every closing UTXO (section 3)</td>
-      <td class="num">{{ r.coverage.addresses_covered }} of {{ r.coverage.addresses_total }} scripts{% if not r.coverage.complete %} · {{ r.coverage.uncovered_btc }} without proof{% endif %}</td></tr>
-  <tr><td>{% if r.period.to_tip %}<span class="muted">–</span>{% else %}{{ yesno(r.coverage.covered_after_period_count == r.coverage.total_count) }}{% endif %}</td>
-      <td>Proofs dated after the period's end</td>
-      <td class="num">{% if r.period.to_tip %}n/a, the period runs to the tip{% else %}{{ r.coverage.addresses_after_period }} of {{ r.coverage.addresses_total }} scripts{% endif %}</td></tr>
-  {% if r.onchain %}
-  <tr><td>{% if r.onchain.error %}<span class="muted">–</span>{% elif r.onchain.contradicted %}{{ yesno(false) }}{% elif r.onchain.spent_since or r.onchain.after_proof %}<span class="muted">–</span>{% else %}{{ yesno(true) }}{% endif %}</td>
-      <td>Closing UTXOs found on the chain at the block of their proof (section 3)</td>
-      <td class="num">{% if r.onchain.error %}not run{% else %}{{ r.onchain.matches }} of {{ r.onchain.outputs }}{% if r.onchain.after_proof %} · {{ r.onchain.after_proof }} received after the proof{% endif %}{% if r.onchain.spent_since %} · {{ r.onchain.spent_since }} spent since{% endif %}{% if r.onchain.contradicted %} · {{ r.onchain.contradicted }} contradicted{% endif %}{% endif %}</td></tr>
-  {% endif %}
-  {% if r.node_check %}
-  <tr><td>{% if r.node_check.ok is none %}<span class="muted">–</span>{% else %}{{ yesno(r.node_check.ok) }}{% endif %}</td><td>Node wallet agrees with the closing UTXOs</td>
-      <td class="num">{% if r.node_check.ok is none %}not run{% else %}{{ r.node_check.listunspent_count }} of {{ r.node_check.closing_count }}{% endif %}</td></tr>
-  {% endif %}
-</table>
-
-
-<h2><span class="n">5.</span> Basis of preparation and limitations</h2>
+<div class="page">
+<h2><span class="n">4.</span> Basis of preparation and limitations</h2>
 <ul class="small">
   <li><strong>Amounts.</strong> BTC, exact to eight decimals (1 BTC = 100 000 000 satoshi); negative amounts in parentheses{% if r.fiat %}; {{ r.fiat.currency }} values from {{ r.fiat.source }}{% endif %}.</li>
-  <li><strong>Point in time.</strong> Holdings are stated as of {{ r.period.end.time_utc | utc }} (block {{ r.period.end.height }}); nothing here says what the wallet holds after that.</li>
+  <li><strong>Point in time.</strong> Opening figures are as of the period's first block, closing figures as of its last, block {{ r.period.end.height }} ({{ r.period.end.time_utc | utc }}){% if r.period.to_tip %}, the chain tip when the statement was prepared{% endif %}; nothing here says what the wallet holds after that.</li>
+  <li><strong>Wallet.</strong> {{ r.label }}{% if r.policy %}, addresses controlled by {{ r.policy }} keys{% endif %}, on the {{ r.chain }} chain. Prepared {{ r.generated_utc | utc }} by {{ r.tool }}; reference {{ r.report_id }}, derived from the figures stated.</li>
   <li><strong>Control, not title.</strong> A proof shows that the keys behind an address signed the message. It does not show who owns the coins, whether they are pledged, lent or otherwise encumbered, or what liabilities stand against them.</li>
   <li><strong>Completeness.</strong> The movements and holdings are those of this wallet as known to the holder's node. That the wallet is the holder's only one, or that all of its addresses are in the node, rests on the holder's representation; no cryptographic check establishes it.</li>
   <li><strong>Scripts, addresses and UTXOs.</strong> BIP-322 defines a proof for a scriptPubKey, "the key script to be proven"; an address is that script, checksummed and encoded, and the proof is not about any particular coin. Coins are UTXOs, each locked to exactly one scriptPubKey, which the node reports. Each page of section 3 reads the UTXO's scriptPubKey from the chain and runs the verifier on those same bytes; control of the script is therefore control of the UTXO. A script proven once is covered for every UTXO paid to it, before or after the proof; the date of each proof is the block named in its message.</li>
@@ -263,7 +270,7 @@
   {% if r.fiat %}<li><strong>Fiat values</strong> are informational, from rates the holder supplied ({{ r.fiat.source }}), at the rate in force on each transaction's day.</li>{% endif %}
 </ul>
 
-<h2><span class="n">6.</span> Verification procedures</h2>
+<h2><span class="n">5.</span> Verification procedures</h2>
 <p class="small muted">Every figure and proof above is checkable on any Bitcoin node with the chain, without a wallet or an index.</p>
 <ol class="small">
   <li><strong>Proof of control, per UTXO.</strong> Run the <em>verify</em> command printed on the UTXO's page in section 3; its first argument is the scriptPubKey, the same bytes the <em>lookup</em> below it reports for the UTXO; it prints what is printed here, starting with VALID and ending with the tool and specification it ran under. Paste it as it stands: the backslashes continue the command across lines, and the message keeps its own line break inside the quotes. For a second opinion, <code>bip322-refcheck ADDRESS PROOF MESSAGE</code> runs independent implementations beside it, and <code>bitcoin-cli getblockheader HASH</code> with the hash from the message's last line confirms the block's height and time.</li>
@@ -271,5 +278,6 @@
   <li><strong>Movements.</strong> Each transaction in section 1 by txid; the running balance follows from the opening balance and the net of each.</li>
   <li><strong>All of it at once.</strong> The proofs come as files next to this statement{% if r.bundles %}: {% for b in r.bundles %}<code>ledger/{{ b.bundle }}</code>{% if not loop.last %}, {% endif %}{% endfor %}{% endif %}. <code>bip322-audit verify FILE</code> checks every proof in a file, its stamp block, and that every output the file lists existed at that block. <code>report.json</code> carries every figure of this statement and its reference {{ r.report_id }}. Both tools install with <code>pip install bip322-reports</code>.</li>
 </ol>
+</div>
 </body>
 </html>
