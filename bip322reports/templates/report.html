@@ -48,7 +48,10 @@
   .head .result { text-align: right; width: 26%; }
   .pill { display: inline-block; padding: 3px 12px; border-radius: 999px; font-weight: 700; font-size: 9.5pt; }
   .pill.ok { background: var(--ok); color: var(--on-pill); } .pill.bad { background: var(--bad); color: var(--on-pill); }
-  .period { font-family: var(--font-label); font-size: 9pt; color: var(--muted); margin: 2px 0 18px; }
+  .period { font-family: var(--font-label); font-size: 9.5pt; color: var(--muted); margin: 2px 0 18px; }
+  .period .when { color: var(--strong); font-weight: 600; font-variant-numeric: tabular-nums; }
+  svg.fig { width: 100%; height: auto; margin: 6px 0 2px; }
+  .caption { font-size: 8pt; color: var(--muted); margin: 0 0 10px; }
   .tiles { display: table; width: 100%; table-layout: fixed; border-spacing: 8px 0; margin: 4px -8px 6px; }
   .tile { display: table-cell; background: var(--tile); border-radius: 6px; padding: 10px 12px; vertical-align: top; }
   .tile .k { font-size: 7.5pt; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
@@ -121,7 +124,7 @@
   </div>
   <div class="result">{% if not r.ok %}<span class="pill bad">ATTENTION</span>{% endif %}</div>
 </div>
-<p class="period">{% if r.holder %}{{ r.holder }} · {% endif %}{{ r.period.start.time_utc | utc }} to {{ r.period.end.time_utc | utc }}{% if r.chain != "main" %} · {{ r.chain }} chain{% endif %}</p>
+<p class="period">{% if r.holder %}{{ r.holder }} · {% endif %}<span class="when">{{ r.period.start.time_utc[:19] | replace("T", " ") }}</span> – <span class="when">{{ r.period.end.time_utc[:19] | replace("T", " ") }}</span> UTC{% if r.chain != "main" %} · {{ r.chain }} chain{% endif %}</p>
 
 {% if not r.ok %}
 <h2 class="attention">Attention</h2>
@@ -276,6 +279,56 @@
 </div>
 
 <h2><span class="n">6.</span> How a proof of control works</h2>
+{% set m = t.muted %}{% set k = t.ink %}{% set st = t.strong %}{% set ln = t.rule_strong %}
+<svg class="fig" viewBox="0 0 700 262" xmlns="http://www.w3.org/2000/svg" font-family="{{ t.font_label | safe }}" font-size="10">
+  <defs><marker id="arr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="{{ m }}"/></marker></defs>
+  <!-- the message -->
+  <rect x="1" y="36" width="178" height="82" rx="3" fill="none" stroke="{{ ln }}"/>
+  <text x="11" y="54" font-weight="700" fill="{{ st }}">Message</text>
+  <text x="11" y="72" font-family="{{ t.font_mono | safe }}" font-size="8.5" fill="{{ k }}">Proof of control 2026</text>
+  <text x="11" y="86" font-family="{{ t.font_mono | safe }}" font-size="8.5" fill="{{ k }}">block:</text>
+  <text x="47" y="86" font-family="{{ t.font_mono | safe }}" font-size="8.5" fill="{{ t.block }}">{{ r.period.end.height }} 000000…</text>
+  <text x="11" y="106" fill="{{ m }}">the block dates the proof</text>
+  <line x1="180" y1="77" x2="226" y2="77" stroke="{{ m }}" marker-end="url(#arr)"/>
+  <text x="203" y="70" text-anchor="middle" fill="{{ m }}" font-size="8.5">hash</text>
+  <!-- to_spend -->
+  <rect x="230" y="1" width="232" height="118" rx="3" fill="none" stroke="{{ ln }}"/>
+  <text x="240" y="19" font-weight="700" fill="{{ st }}">to_spend <tspan font-weight="400" fill="{{ m }}">virtual, never broadcast</tspan></text>
+  <text x="240" y="41" fill="{{ k }}">input: no coin at all (the null outpoint),</text>
+  <text x="240" y="55" fill="{{ k }}">its script carries the hash of the message</text>
+  <text x="240" y="79" fill="{{ k }}">output: 0 BTC, locked to the</text>
+  <text x="240" y="93" fill="{{ t.script }}" font-weight="600">scriptPubKey being proven</text>
+  <text x="240" y="110" fill="{{ m }}">a lock with nothing in it</text>
+  <line x1="346" y1="120" x2="346" y2="150" stroke="{{ m }}" marker-end="url(#arr)"/>
+  <text x="354" y="139" fill="{{ m }}" font-size="8.5">spends it</text>
+  <!-- to_sign -->
+  <rect x="230" y="153" width="232" height="108" rx="3" fill="none" stroke="{{ ln }}"/>
+  <text x="240" y="171" font-weight="700" fill="{{ st }}">to_sign <tspan font-weight="400" fill="{{ m }}">virtual, never broadcast</tspan></text>
+  <text x="240" y="193" fill="{{ k }}">input: the output of to_spend, unlocked by</text>
+  <text x="240" y="207" fill="{{ k }}">a witness: signatures and script, exactly</text>
+  <text x="240" y="221" fill="{{ k }}">what a real spend would need</text>
+  <text x="240" y="243" fill="{{ t.proof }}" font-weight="600">that witness is the proof</text>
+  <text x="240" y="255" fill="{{ m }}" font-size="9">output: 0 BTC, unspendable</text>
+  <!-- the chain -->
+  <rect x="510" y="1" width="189" height="118" rx="3" fill="none" stroke="{{ ln }}"/>
+  <text x="520" y="19" font-weight="700" fill="{{ st }}">On the chain</text>
+  <text x="520" y="41" fill="{{ t.utxo }}" font-weight="600">UTXO txid:vout</text>
+  <text x="520" y="59" fill="{{ t.amount }}" font-weight="600">{{ r.closing.coins[0].amount_btc if r.closing.coins else "0.10000000" }} BTC</text>
+  <text x="520" y="79" fill="{{ k }}">locked to the same</text>
+  <text x="520" y="93" fill="{{ t.script }}" font-weight="600">scriptPubKey</text>
+  <line x1="463" y1="100" x2="508" y2="100" stroke="{{ t.script }}" stroke-dasharray="3 3"/>
+  <text x="486" y="92" text-anchor="middle" fill="{{ t.script }}" font-size="8.5">same lock</text>
+  <!-- the verifier -->
+  <rect x="510" y="153" width="189" height="108" rx="3" fill="none" stroke="{{ ln }}"/>
+  <text x="520" y="171" font-weight="700" fill="{{ st }}">Verifier</text>
+  <text x="520" y="193" fill="{{ k }}">rebuilds both transactions from</text>
+  <text x="520" y="207" fill="{{ k }}">the message and the scriptPubKey,</text>
+  <text x="520" y="221" fill="{{ k }}">runs the consensus script engine</text>
+  <text x="520" y="235" fill="{{ k }}">on the witness</text>
+  <text x="520" y="253" fill="{{ t.good }}" font-weight="700">VALID</text>
+  <line x1="463" y1="207" x2="508" y2="207" stroke="{{ m }}" marker-end="url(#arr)"/>
+</svg>
+<p class="caption">A proof of control is a spend of the scriptPubKey that can never happen: the coin it spends does not exist, but the witness is the one a real spend would need. The same scriptPubKey locks the UTXO on the chain.</p>
 <div class="small runin">
   <p><strong>Coins and scripts.</strong> A bitcoin balance is a set of unspent transaction outputs, UTXOs. Each carries an amount and a lock, its scriptPubKey: the script a spending transaction must satisfy, typically with signatures from particular keys. For a multisignature wallet the lock is a hash of the script that names the keys and the threshold ({{ r.policy or "m of n" }}); whoever can satisfy that script controls every UTXO locked to it. Control is therefore a property of the scriptPubKey, and that is what a proof is about.</p>
   <p><strong>The message.</strong> The signers sign the text shown on each UTXO page: a title and a line naming a block by height, hash and time. The hash of a block cannot be known before the block exists, so a proof over it cannot have been made earlier; the block is the proof's date.</p>

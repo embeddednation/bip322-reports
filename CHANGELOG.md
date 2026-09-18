@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.6.9 (2026-09-18)
+
+- The period line reads as a range: the two instants in the strong colour
+  with an en dash between them and UTC once.
+- Section 6 opens with a figure: message, to_spend, to_sign, the witness as
+  the proof, the UTXO on the chain under the same scriptPubKey, and the
+  verifier; inline SVG in the theme's colours and fonts.
+
 ## 0.6.8 (2026-09-18)
 
 - The output files are named after their directory (`treasury-2026/
