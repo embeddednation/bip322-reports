@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.6.3 (2026-09-18)
+
+- Solarized light is the default theme. Terminal blocks sit on the page's
+  own background with no border, so the value colours read the same
+  everywhere.
+- The commands' output is the finding: the VALID and HELD badges are gone,
+  and the verifier line under them with them (`verifymessage` now ends with
+  the tool and specification, `holdings` with the node and the tool). A
+  badge follows only for INVALID, NO PROOF, CONTRADICTED, SPENT SINCE,
+  AFTER THE PROOF or NOT RUN.
+- Requires bip322-audit 0.10.4 (bip322-core 0.9.2).
+
 ## 0.6.2 (2026-09-18)
 
 - `report --theme paper|light|dark`: white paper (default), or Solarized

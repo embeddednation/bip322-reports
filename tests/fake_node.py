@@ -79,6 +79,8 @@ class FakeNode(BitcoinCli):
         self.calls.append((method, *params))
         if method == "getblockchaininfo":
             return {"chain": "main", "blocks": self.tip_height, "bestblockhash": fake_hash(self.tip_height)}
+        if method == "getnetworkinfo":
+            return {"subversion": "/Satoshi:31.1.0/"}
         if method == "getwalletinfo":
             return {"walletname": self.wallet_name}
         if method == "getblockhash":

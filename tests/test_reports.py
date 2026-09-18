@@ -322,7 +322,7 @@ def test_change_address_proven_before_the_spend_covers_the_change_output(tmp_pat
     assert by_out[("bb", 0)]["lists_output"] and not by_out[("bb", 0)]["before_output"]
     assert by_out[("ee", 0)] is None  # the internal move went to a3, never proven
     html = render_html(report)
-    assert "before this UTXO was received" in html and "verifymessage" in html and "VALID" in html
+    assert "The proof predates this UTXO" in html and "verifymessage" in html and "VALID" in html
     by_addr = {a["address"]: a for a in report["closing"]["addresses"]}
     assert (
         by_addr[wallet.derive(1, 1).address]["proof"]["before_coins"] == "all"

@@ -258,8 +258,8 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument(
         "--theme",
         choices=("paper", "light", "dark"),
-        default="paper",
-        help="page colours: white paper, Solarized light or dark (default %(default)s)",
+        default="light",
+        help="page colours: Solarized light, white paper or Solarized dark (default %(default)s)",
     )
     p.add_argument(
         "--no-proofs", action="store_true", help="do not copy the ledger's proofs.json files into <DIR>/ledger/ next to the report"

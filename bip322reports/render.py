@@ -150,7 +150,7 @@ def _highlight(text: str, tokens: list) -> Markup:
     return Markup("").join(parts)
 
 
-def render_html(report: dict, *, explorer: str | None = "https://mempool.space", theme: str = "paper") -> str:
+def render_html(report: dict, *, explorer: str | None = "https://mempool.space", theme: str = "light") -> str:
     if theme not in THEMES:
         raise ValueError(f"unknown theme {theme!r}; one of {', '.join(THEMES)}")
     return (
