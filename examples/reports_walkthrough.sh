@@ -77,14 +77,18 @@ PY
 )
 SIGNED=$($CLI descriptorprocesspsbt "$FUNDED" "$PRIV" | .venv/bin/python -c "import json,sys;d=json.load(sys.stdin);assert d['complete'];print(d['hex'])")
 $CLI sendrawtransaction "$SIGNED" >/dev/null; $CLI -rpcwallet=miner generatetoaddress 2 "$MINE" >/dev/null
-echo "nothing left to prove after the spend, because the change address already is:"
+echo "mid-year, nothing is left to prove: the change address already is"
 $AUDIT --cli "$CLI" -w watch snapshot --depth 1 --skip-proven "$LEDGER" 2>&1 | tail -1 || true
 
-step "6. the year's balance report: opening and closing balances, movements, every closing coin backed by a verified proof"
+step "6. year end: one full bundle over every output, so each closing coin has a proof dated at (or after) the closing block"
+run $AUDIT --cli "$CLI" -w watch snapshot --depth 1 --text "Proof of control {date}" -o "$LEDGER/snapshot-year-end"
+sign_bundle "$LEDGER/snapshot-year-end"
+
+step "7. the year's balance report: opening and closing balances, movements, every closing coin backed by a verified proof"
 run $REPORTS --cli "$CLI" -w watch report --year "$(date -u +%Y)" --ledger "$LEDGER" $PDF -o "$WORK/report"
 ls "$WORK/report"
 
-step "7. the same, from a cached history and for two heights"
+step "8. the same, from a cached history and for two heights"
 run $REPORTS --cli "$CLI" -w watch history -o "$WORK/history.json"
 run $REPORTS --cli "$CLI" report --history "$WORK/history.json" --from-height 103 --to-height 105 --ledger "$LEDGER" --rate 950000 --currency SEK -o "$WORK/report-q"
 

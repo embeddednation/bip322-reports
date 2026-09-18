@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.5.5 (2026-09-18)
+
+- The on-chain lookup of each closing UTXO is made at the block named in its
+  proof's message (`holdings TXID:VOUT --at <that block>`), not at the
+  closing block: control and holding are shown at one block, and "still
+  unspent" carries the holding to the closing block. A UTXO received after
+  its proof is marked AFTER THE PROOF (not a contradiction; the year-end
+  bundle gives it a later proof) and the summary counts these separately.
+- Smaller title, wrapping, for long wallet names.
+- Walkthrough: a full year-end bundle before the report.
+
 ## 0.5.4 (2026-09-18)
 
 - The statement is named after the node wallet; `--label` is gone.

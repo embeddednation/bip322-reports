@@ -299,54 +299,69 @@ def _verify_by_script(a: dict, engines) -> None:
 
 
 def _onchain(cli: BitcoinCli, closing_rows: list[dict], period: Period, progress=None) -> dict:
-    """Run the reader's on-chain step now, per output, and keep the command with its output.
+    """Run the reader's on-chain step now, per UTXO, at the block named in its proof, and keep the command with its output.
 
-    ``holdings TXID:VOUT --at <closing block>`` is a direct lookup.  An output
-    unspent now and confirmed by the closing block was held at that block; the
-    address and amount the node returns are compared with the statement's.
-    Spent since is not a contradiction; a different address or amount is.
+    ``holdings TXID:VOUT --at <proof block>`` is a direct lookup.  A UTXO
+    confirmed by that block and unspent now was held at that block: together
+    with the proof dated the same block that is one claim with no gap, and
+    "still unspent" carries it to the closing block, whichever side of the
+    proof it lies on.  A UTXO confirmed after its proof's block is not a
+    contradiction; the proof predates it and a later proof is needed.  A
+    different scriptPubKey or amount is a contradiction.  UTXOs without a
+    proof are looked up at the closing block.
     """
     if progress:
-        progress("looking up the closing outputs on chain (bip322 audit holdings)")
-    at = period.end.height
-    counts = {"matches": 0, "spent_since": 0, "contradicted": 0, "not_run": 0}
-    try:
-        result = holdings(cli, [f"{r['txid']}:{r['vout']}" for r in closing_rows], at=at)
-    except (RpcError, ValueError) as exc:
-        for r in closing_rows:
-            r["onchain"] = {
-                "command": shell_words(holdings_command([f"{r['txid']}:{r['vout']}"], at).split()),
-                "output": f"(not run: {exc})",
-                "status": "not run",
-            }
-        counts["not_run"] = len(closing_rows)
-        return {"error": str(exc), **counts, "outputs": len(closing_rows)}
-    found = {(o["txid"], o["vout"]): o for o in result["outputs"]}
+        progress("looking up the closing UTXOs on chain at the blocks of their proofs (bip322 audit holdings)")
     expected_script = {}
     for r in closing_rows:
         with contextlib.suppress(BIP322Error, ValueError):
             expected_script[r["address"]] = describe_address(r["address"])["scriptPubKey"]
+    counts = {"matches": 0, "spent_since": 0, "after_proof": 0, "contradicted": 0, "not_run": 0}
+    groups: dict[int, list[dict]] = {}
     for r in closing_rows:
-        o = found[(r["txid"], r["vout"])]
-        if not o["unspent"]:
-            status = "spent_since"
-        elif (
-            o["counted"]
-            and o["amount_sat"] == r["amount_sat"]
-            and o["address"] == r["address"]
-            and (not o.get("script") or o["script"] == expected_script.get(r["address"], o["script"]))
-        ):
-            status = "matches"
-        else:
-            status = "contradicted"
-        counts[status] += 1
-        counted_sat = o["amount_sat"] if o["counted"] else 0
-        r["onchain"] = {
-            "command": shell_words(holdings_command([f"{r['txid']}:{r['vout']}"], at).split()),
-            "output": format_holdings({**result, "outputs": [o], "total_sat": counted_sat, "total_btc": btc(counted_sat)}),
-            "status": status,
-        }
-    return {"tip": result["tip"], "at": result["at"], **counts, "outputs": len(closing_rows), "error": None}
+        at = int(r["proof"]["stamp"]["height"]) if r.get("proof") else period.end.height
+        groups.setdefault(at, []).append(r)
+    error = None
+    for at, rows in groups.items():
+        try:
+            result = holdings(cli, [f"{r['txid']}:{r['vout']}" for r in rows], at=at)
+        except (RpcError, ValueError) as exc:
+            error = str(exc)
+            for r in rows:
+                r["onchain"] = {
+                    "command": shell_words(holdings_command([f"{r['txid']}:{r['vout']}"], at).split()),
+                    "output": f"(not run: {exc})",
+                    "status": "not run",
+                    "at": at,
+                }
+            counts["not_run"] += len(rows)
+            continue
+        found = {(o["txid"], o["vout"]): o for o in result["outputs"]}
+        for r in rows:
+            o = found[(r["txid"], r["vout"])]
+            same = (
+                o["amount_sat"] == r["amount_sat"]
+                and o["address"] == r["address"]
+                and (not o.get("script") or o["script"] == expected_script.get(r["address"], o["script"]))
+            )
+            if not o["unspent"]:
+                status = "spent_since"
+            elif not same:
+                status = "contradicted"
+            elif o["counted"]:
+                status = "matches"
+            else:
+                status = "after_proof"
+            counts[status] += 1
+            counted_sat = o["amount_sat"] if o["counted"] else 0
+            r["onchain"] = {
+                "command": shell_words(holdings_command([f"{r['txid']}:{r['vout']}"], at).split()),
+                "output": format_holdings({**result, "outputs": [o], "total_sat": counted_sat, "total_btc": btc(counted_sat)}),
+                "status": status,
+                "at": at,
+                "tip": result["tip"]["height"],
+            }
+    return {**counts, "outputs": len(closing_rows), "error": error}
 
 
 def _by_address(rows: list[dict]) -> list[dict]:
@@ -431,11 +446,12 @@ def format_summary(report: dict) -> str:
     oc = report.get("onchain")
     if oc:
         lines.append(
-            "on chain (holdings by output, --at closing block): "
+            "on chain (holdings by UTXO at the block of its proof): "
             + (
                 f"not run ({oc['error']})"
                 if oc.get("error")
-                else f"{oc['matches']}/{oc['outputs']} outputs match"
+                else f"{oc['matches']}/{oc['outputs']} held when proven"
+                + (f", {oc['after_proof']} received after their proof" if oc["after_proof"] else "")
                 + (f", {oc['spent_since']} spent since" if oc["spent_since"] else "")
                 + (f", {oc['contradicted']} CONTRADICTED" if oc["contradicted"] else "")
             )

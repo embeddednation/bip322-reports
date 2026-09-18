@@ -15,8 +15,8 @@ A report answers, for a wallet and a period:
 
 Two ways of working with it, the same tool for both:
 
-* **Continuously, for yourself.** Before broadcasting a spend, prove its change address (`bip322-audit prove ADDRESS --ledger LEDGER`, sign, finalize): a valid proof means the quorum controls where the change goes, and the output that lands there later is covered by it. New deposit addresses the same way, or with `snapshot --skip-proven LEDGER` after the fact. A report can then be produced at any time, with every coin backed by your own signed message.
-* **On demand, for an auditor.** After the period's end, take one bundle over every output under a message that names the audit, and produce the report for the year; the report says for each closing coin whether its proof is stamped after the period's end. The auditor verifies the bundles and the report on their own node with `bip322-audit verify` and `bitcoin-cli`.
+* **Continuously, for yourself.** Before broadcasting a spend, prove its change address (`bip322-audit prove ADDRESS --ledger LEDGER`, sign, finalize): a valid proof means the quorum controls where the change goes. New deposit addresses the same way, or with `snapshot --skip-proven LEDGER` after the fact. A report can then be produced at any time, with every coin backed by your own signed message; a coin that arrived after its proof is marked as such (the proof shows control, not the holding).
+* **On demand, for an auditor.** After the period's end, take one full bundle (no `--skip-proven`) over every output under a message that names the audit, and produce the report for the year. Every closing coin then has a proof dated after the closing block, and the chain lookup at that block shows the coin held. The auditor verifies the bundles and the report on their own node with `bip322-audit verify` and `bitcoin-cli`.
 
 ## Install
 
@@ -137,14 +137,16 @@ The wallet is named by the node wallet's name; `--holder NAME` puts the holder's
   one page per UTXO in two steps, each a pasteable command with what it
   printed. *Proof of control of the scriptPubKey*: message, proof, and
   `bip322 verifymessage <scriptPubKey> ...` with its verdict. *On the
-  chain*: `bip322 audit holdings TXID:VOUT --at <closing block>`, which
-  reports the same scriptPubKey as the UTXO's lock, the amount, and that it
-  was held at the closing block. BIP-322
-  defines the proof for a scriptPubKey ("the key script to be proven"); an
-  address is that script encoded, which is why the statement can verify on
-  the bytes themselves. A proof covers every UTXO paid to its script, before
-  or after the proof (a change address proven before the spend); the
-  statement says when that is the case.
+  chain*: `bip322 audit holdings TXID:VOUT --at <block of the proof>`, the
+  block named in the proof's message, which reports the same scriptPubKey as
+  the UTXO's lock, the amount, that it was held at that block, and that it
+  is still unspent. Control and holding are thus shown at one block, and
+  "still unspent" carries the holding to the closing block. BIP-322 defines
+  the proof for a scriptPubKey ("the key script to be proven"); an address
+  is that script encoded, which is why the statement can verify on the
+  bytes themselves. A coin that arrived after its proof (a change address
+  proven before the spend) is marked so; the year-end bundle gives it a
+  proof dated after it.
 * Every movement: time, txid, kind (receive, send, internal), net, fee, the
   running balance, and for a payment the address paid.
 * How to verify all of it independently.
