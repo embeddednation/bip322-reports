@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.6.2 (2026-09-18)
+
+- `report --theme paper|light|dark`: white paper (default), or Solarized
+  light or dark over the whole page, margins included; the value colours are
+  the same in every theme. Amounts are coloured in the holdings tables too.
+- Type a size smaller throughout (9.5pt body, 7.5pt monospace); commands
+  are printed 84 characters wide, and a line of the message breaks after a
+  space, so a mainnet block line keeps its hash whole. A test runs the
+  printed command through bash and compares the arguments.
+
 ## 0.6.1 (2026-09-18)
 
 - The `kernel` extra pinned bip322-audit 0.10.2 while the package required

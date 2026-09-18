@@ -193,7 +193,7 @@ def build_report(
     return report
 
 
-WIDTH = 76  # characters per printed command line: fits an A4 page in the statement's monospace size
+WIDTH = 84  # characters per printed command line: fits an A4 page in the statement's monospace size, and a mainnet block line
 
 
 def shell_words(argv: list[str]) -> str:
@@ -230,6 +230,9 @@ def shell_command(argv: list[str]) -> str:
         chunks: list[str] = []
         while len(text) > WIDTH:
             cut = WIDTH
+            space = text.rfind(" ", WIDTH // 2, WIDTH + 1)
+            if space > 0:  # a line of the message: break after a space, so the block line keeps its hash and time whole
+                cut = space + 1
             while cut > 1 and text[cut - 1] == "\\":  # never break right after a backslash
                 cut -= 1
             chunks.append(text[:cut])

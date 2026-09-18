@@ -10,6 +10,85 @@ from bip322audit.rpc import btc
 from jinja2 import Environment, PackageLoader, StrictUndefined, select_autoescape
 from markupsafe import Markup, escape
 
+SOLARIZED = {
+    "base03": "#002b36",
+    "base02": "#073642",
+    "base01": "#586e75",
+    "base00": "#657b83",
+    "base0": "#839496",
+    "base1": "#93a1a1",
+    "base2": "#eee8d5",
+    "base3": "#fdf6e3",
+    "yellow": "#b58900",
+    "orange": "#cb4b16",
+    "red": "#dc322f",
+    "magenta": "#d33682",
+    "violet": "#6c71c4",
+    "blue": "#268bd2",
+    "cyan": "#2aa198",
+    "green": "#859900",
+}  # Ethan Schoonover's palette; the accents keep their weight on either background
+_S = SOLARIZED
+
+# The page's colours by theme.  The accent colours of the values a reader matches
+# (scriptPubKey, block, proof, UTXO, amount) are Solarized in every theme.
+THEMES = {
+    "paper": {  # a white page; only the terminal blocks are Solarized light
+        "bg": "#ffffff",
+        "ink": "#1b1b1b",
+        "strong": "#111111",
+        "muted": "#6b6b6b",
+        "rule": "#d6d6d6",
+        "rule_strong": "#333333",
+        "head": "#f2f3f5",
+        "zebra": "#fafafa",
+        "accent": "#1f3a5f",
+        "term_bg": _S["base3"],
+        "term_ink": _S["base00"],
+        "term_border": _S["base2"],
+        "prompt": _S["base1"],
+        "ok": "#0f7a3a",
+        "bad": "#b3261e",
+        "on_pill": "#ffffff",
+    },
+    "light": {  # Solarized light over the whole page; terminal blocks on base2, the palette's highlight
+        "bg": _S["base3"],
+        "ink": _S["base01"],
+        "strong": _S["base02"],
+        "muted": _S["base00"],
+        "rule": _S["base2"],
+        "rule_strong": _S["base01"],
+        "head": _S["base2"],
+        "zebra": "#f7f0dc",
+        "accent": _S["base01"],
+        "term_bg": _S["base2"],
+        "term_ink": _S["base00"],
+        "term_border": "#e2dac0",
+        "prompt": _S["base1"],
+        "ok": _S["green"],
+        "bad": _S["red"],
+        "on_pill": _S["base3"],
+    },
+    "dark": {  # Solarized dark
+        "bg": _S["base03"],
+        "ink": _S["base0"],
+        "strong": _S["base1"],
+        "muted": _S["base00"],
+        "rule": _S["base02"],
+        "rule_strong": _S["base1"],
+        "head": _S["base02"],
+        "zebra": "#04303c",
+        "accent": _S["base1"],
+        "term_bg": _S["base02"],
+        "term_ink": _S["base0"],
+        "term_border": "#0f4a5a",
+        "prompt": _S["base01"],
+        "ok": _S["green"],
+        "bad": _S["red"],
+        "on_pill": _S["base03"],
+    },
+}
+
 
 def _env() -> Environment:
     env = Environment(
@@ -71,8 +150,12 @@ def _highlight(text: str, tokens: list) -> Markup:
     return Markup("").join(parts)
 
 
-def render_html(report: dict, *, explorer: str | None = "https://mempool.space") -> str:
-    return _env().get_template("report.html").render(r=report, explorer=(explorer or "").rstrip("/") or None)
+def render_html(report: dict, *, explorer: str | None = "https://mempool.space", theme: str = "paper") -> str:
+    if theme not in THEMES:
+        raise ValueError(f"unknown theme {theme!r}; one of {', '.join(THEMES)}")
+    return (
+        _env().get_template("report.html").render(r=report, explorer=(explorer or "").rstrip("/") or None, t={**THEMES[theme], **SOLARIZED})
+    )
 
 
 def write_csv(report: dict, path: Path) -> None:

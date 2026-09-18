@@ -147,7 +147,7 @@ def cmd_report(args) -> int:
         raise CLIError(f"{directory} exists and is not empty (use --force to overwrite)")
     directory.mkdir(parents=True, exist_ok=True)
     (directory / "report.json").write_text(json.dumps(report, indent=2, default=str) + "\n")
-    html = render_html(report, explorer=args.explorer)
+    html = render_html(report, explorer=args.explorer, theme=args.theme)
     (directory / "report.html").write_text(html)
     write_csv(report, directory / "transactions.csv")
     if args.pdf:
@@ -255,6 +255,12 @@ def build_parser() -> argparse.ArgumentParser:
         help="block explorer for links in the HTML; '' for no links (default %(default)s)",
     )
     p.add_argument("--pdf", action="store_true", help="also write report.pdf (needs WeasyPrint: ./setup.sh --pdf)")
+    p.add_argument(
+        "--theme",
+        choices=("paper", "light", "dark"),
+        default="paper",
+        help="page colours: white paper, Solarized light or dark (default %(default)s)",
+    )
     p.add_argument(
         "--no-proofs", action="store_true", help="do not copy the ledger's proofs.json files into <DIR>/ledger/ next to the report"
     )
