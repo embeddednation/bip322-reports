@@ -98,7 +98,7 @@ bip322-reports [--cli CMD]           block WHEN
 bip322-reports [--cli CMD] [-w NAME] balance [--at WHEN | --height H] [--history FILE]
 bip322-reports [--cli CMD] [-w NAME] report (--year Y | --from WHEN --to WHEN | --from-height H --to-height H)
                                             [--ledger DIR]... [--holder NAME] [--history FILE]
-                                            [--rates CSV | --rate N] [--currency CODE] [--explorer URL] [--pdf] [--theme paper|light|dark] [-o DIR]
+                                            [--rates CSV | --rate N] [--currency CODE] [--explorer URL] [--pdf] [--theme light|paper|dark|economist] [--heading STYLE] [-o DIR]
 bip322-reports help [COMMAND]
 ```
 
@@ -146,8 +146,16 @@ The wallet is named by the node wallet's name; `--holder NAME` puts the holder's
   palette), and the commands and their output sit in terminal blocks in the
   same palette. `--theme` picks Solarized light (the default), white paper,
   Solarized dark, or `economist`: The Economist's Marber palette (Los
-  Angeles canvas, London greys, a red tab on each heading, ruled tables,
-  the values in the system's base colours) for the whole page. The commands' output is the finding;
+  Angeles canvas, London greys, ruled tables, the values in the system's
+  base colours with the brand red for the block) for the whole page, set
+  in a serif for reading and a sans for labels and tables, as their own
+  Economist Serif and Sans are used. `--heading` picks how section
+  headings are set: `number` (the number in red), `tab` (a red tab over a
+  grey rule, their chart signature), `redrule`, or `underline`.
+* Typefaces: Adobe's Source Serif 4, Source Sans 3 and Source Code Pro
+  (SIL Open Font License) are bundled and embedded in the PDF, so the
+  statement looks the same on every machine; `report` copies them to
+  `<out>/fonts/` for the HTML. The commands' output is the finding;
   a badge follows only when something needs saying (INVALID, NO PROOF,
   CONTRADICTED, a proof that predates its UTXO). BIP-322 defines
   the proof for a scriptPubKey ("the key script to be proven"); an address

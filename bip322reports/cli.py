@@ -19,7 +19,7 @@ from .coverage import relative_name
 from .fiat import Rates
 from .history import History, fetch_history
 from .period import block, last_block_before, parse_when, period_between, period_for_heights, period_for_year
-from .render import render_html, write_csv, write_pdf
+from .render import HEADINGS, copy_fonts, render_html, write_csv, write_pdf
 from .report import build_report, format_summary
 
 
@@ -147,8 +147,9 @@ def cmd_report(args) -> int:
         raise CLIError(f"{directory} exists and is not empty (use --force to overwrite)")
     directory.mkdir(parents=True, exist_ok=True)
     (directory / "report.json").write_text(json.dumps(report, indent=2, default=str) + "\n")
-    html = render_html(report, explorer=args.explorer, theme=args.theme)
+    html = render_html(report, explorer=args.explorer, theme=args.theme, heading=args.heading)
     (directory / "report.html").write_text(html)
+    copy_fonts(directory)
     write_csv(report, directory / "transactions.csv")
     if args.pdf:
         write_pdf(html, directory / "report.pdf")
@@ -260,6 +261,11 @@ def build_parser() -> argparse.ArgumentParser:
         choices=("paper", "light", "dark", "economist"),
         default="light",
         help="page colours: Solarized light, white paper, Solarized dark, or The Economist's Marber palette (default %(default)s)",
+    )
+    p.add_argument(
+        "--heading",
+        choices=HEADINGS,
+        help="section headings: coloured text over a rule (underline), a red tab over a grey rule (tab), the number in red (number), a thin red rule (redrule); default per theme",
     )
     p.add_argument(
         "--no-proofs", action="store_true", help="do not copy the ledger's proofs.json files into <DIR>/ledger/ next to the report"

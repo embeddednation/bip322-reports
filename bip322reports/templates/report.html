@@ -4,30 +4,44 @@
 <meta charset="utf-8">
 <title>{{ r.label }} · {{ r.period.label }}</title>
 <style>
+  {% for f in faces %}
+  @font-face { font-family: "{{ f.family }}"; src: url("{{ f.url }}") format("woff2"); font-weight: {{ f.weight }}; font-style: {{ f.style }}; }
+  {% endfor %}
   /* colours come from the theme (paper, Solarized light or dark); the accents are Solarized in every theme */
   :root { --bg: {{ t.bg }}; --ink: {{ t.ink }}; --strong: {{ t.strong }}; --muted: {{ t.muted }}; --rule: {{ t.rule }}; --rule-strong: {{ t.rule_strong }};
     --head: {{ t.head }}; --zebra: {{ t.zebra }}; --accent: {{ t.accent }}; --ok: {{ t.ok }}; --bad: {{ t.bad }}; --on-pill: {{ t.on_pill }};
     --tile: {{ t.tile }}; --term-bg: {{ t.term_bg }}; --term-ink: {{ t.term_ink }}; --term-border: {{ t.term_border }}; --prompt: {{ t.prompt }};
+    --font-body: {{ t.font_body | safe }}; --font-heading: {{ t.font_heading | safe }}; --font-label: {{ t.font_label | safe }}; --font-mono: {{ t.font_mono | safe }};
     --c-script: {{ t.script }}; --c-block: {{ t.block }}; --c-proof: {{ t.proof }}; --c-utxo: {{ t.utxo }}; --c-amount: {{ t.amount }}; --c-good: {{ t.good }}; --c-bad: {{ t.bad_text }}; }
   @page {
     size: A4; margin: 22mm 16mm 20mm 16mm; background: {{ t.bg }};
-    @top-left { content: "Statement of bitcoin holdings and movements"; font: 7.5pt sans-serif; color: {{ t.muted }}; }
-    @top-right { content: string(doc-title); font: 7.5pt sans-serif; color: {{ t.muted }}; }
-    @bottom-left { content: "Reference " string(ref) " · generated " string(generated); font: 7.5pt sans-serif; color: {{ t.muted }}; }
-    @bottom-right { content: "Page " counter(page) " of " counter(pages); font: 7.5pt sans-serif; color: {{ t.muted }}; }
+    @top-left { content: "Statement of bitcoin holdings and movements"; font: 7.5pt {{ t.font_label | safe }}; color: {{ t.muted }}; }
+    @top-right { content: string(doc-title); font: 7.5pt {{ t.font_label | safe }}; color: {{ t.muted }}; }
+    @bottom-left { content: "Reference " string(ref) " · generated " string(generated); font: 7.5pt {{ t.font_label | safe }}; color: {{ t.muted }}; }
+    @bottom-right { content: "Page " counter(page) " of " counter(pages); font: 7.5pt {{ t.font_label | safe }}; color: {{ t.muted }}; }
   }
-  html { font: 9.5pt/1.45 "Inter", "Helvetica Neue", Arial, "DejaVu Sans", sans-serif; color: var(--ink); background: var(--bg); }
+  html { font: 9.5pt/1.45 var(--font-body); color: var(--ink); background: var(--bg); }
+  h1, h2, h3 { font-family: var(--font-heading); }
+  .eyebrow, table, .tile, .badge, .pill, .small { font-family: var(--font-label); }
+  {% if t.oldstyle %}p, li { font-variant-numeric: oldstyle-nums; }{% endif %}
   body { margin: 0; }
   h1 { font-size: 14pt; line-height: 1.2; margin: 0; letter-spacing: -0.01em; overflow-wrap: anywhere; color: var(--strong); string-set: doc-title content(); }
   h2 { font-size: 12pt; color: var(--accent); margin: 24px 0 8px; padding-bottom: 4px; border-bottom: 2px solid var(--accent); break-after: avoid; }
-  {% if t.tab %}
-  h2 { border-bottom: 0; border-top: 1px solid var(--rule); padding: 0; }
-  h2::before { content: ""; display: block; width: 36px; height: 4px; background: {{ t.tab }}; margin: -1px 0 8px; }
+  {% set red = t.tab or t.bad %}
+  {% if t.heading == "tab" %}
+  h2 { color: var(--strong); border-bottom: 0; border-top: 1px solid var(--rule); padding: 0; }
+  h2::before { content: ""; display: block; width: 36px; height: 4px; background: {{ red }}; margin: -1px 0 8px; }
+  {% elif t.heading == "number" %}
+  h2 { color: var(--strong); border-bottom: 0; padding-bottom: 0; }
+  h2 .n { color: {{ red }}; }
+  {% elif t.heading == "redrule" %}
+  h2 { color: var(--strong); border-bottom: 1px solid {{ red }}; }
   {% endif %}
+  {% if t.tab %}.eyebrow { color: {{ t.tab }}; }{% endif %}
   h3 { font-size: 10pt; margin: 14px 0 4px; color: var(--strong); break-after: avoid; }
   p { margin: 4px 0 8px; }
   strong { color: var(--strong); }
-  .eyebrow { font-size: 8pt; letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted); margin: 0 0 6px; }
+  .eyebrow { font-size: 8pt; letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted); margin: 0 0 6px; font-weight: 600; }
   .muted { color: var(--muted); }
   .small { font-size: 8pt; }
   .head { display: table; width: 100%; margin-bottom: 8px; }
@@ -50,7 +64,7 @@
   tr { break-inside: avoid; }
   tr.total td { font-weight: 700; color: var(--strong); background: var(--bg); border-top: 1px solid var(--rule-strong); border-bottom: 3px double var(--rule-strong); }
   td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
-  .mono, code { font-family: "JetBrains Mono", Menlo, Consolas, "DejaVu Sans Mono", monospace; font-size: 7.5pt; overflow-wrap: anywhere; word-break: break-all; }
+  .mono, code { font-family: var(--font-mono); font-size: 7.5pt; overflow-wrap: anywhere; word-break: break-all; }
   .kv td:first-child { width: 30%; color: var(--muted); }
   .checks td:first-child { width: 4%; font-weight: 700; text-align: center; }
   .ok { color: var(--ok); font-weight: 700; } .bad { color: var(--bad); font-weight: 700; }
@@ -69,9 +83,9 @@
   table.coins td.k { color: var(--muted); font-size: 8pt; padding-top: 6px; overflow-wrap: normal; }
   code.msg { white-space: pre-wrap; display: block; }
   .page { break-before: page; }
-  .page h2 { font-size: 10pt; font-family: "JetBrains Mono", Menlo, Consolas, "DejaVu Sans Mono", monospace; overflow-wrap: anywhere; word-break: break-all; }
+  .page h2 { font-size: 10pt; font-family: var(--font-mono); overflow-wrap: anywhere; word-break: break-all; }
   .page h2 .mono { font: inherit; }
-  pre { margin: 0; font-family: "JetBrains Mono", Menlo, Consolas, "DejaVu Sans Mono", monospace; font-size: 7.5pt; line-height: 1.35; white-space: pre; overflow-x: hidden; }
+  pre { margin: 0; font-family: var(--font-mono); font-size: 7.5pt; line-height: 1.35; white-space: pre; overflow-x: hidden; }
   pre.out { white-space: pre-wrap; overflow-wrap: anywhere; margin-top: 4px; }
   .term { color: var(--term-ink); padding: 3px 0 2px; margin: 0 0 2px; }
   .term .prompt { color: var(--prompt); }
@@ -152,7 +166,7 @@
 </table>{% if r.fiat %}
 <p class="small muted">Fiat values in {{ r.fiat.currency }} from {{ r.fiat.source }}.</p>{% endif %}
 
-<h2>1. Holdings at the start of the period · {{ r.period.start.time_utc | utc }}</h2>
+<h2><span class="n">1.</span> Holdings at the start of the period · {{ r.period.start.time_utc | utc }}</h2>
 {% if r.opening.addresses %}
 <table>
   <colgroup><col><col class="w-btc"></colgroup>
@@ -166,7 +180,7 @@
 </table>
 {% else %}<p class="muted">No holdings: the balance at the start of the period was 0.00000000.</p>{% endif %}
 
-<h2>2. Movements in the period</h2>
+<h2><span class="n">2.</span> Movements in the period</h2>
 {% if r.transactions %}
 <table>
   <colgroup><col class="w-date"><col><col class="w-kind"><col class="w-num"><col class="w-num"><col class="w-num">{% if r.fiat %}<col class="w-num">{% endif %}</colgroup>
@@ -185,7 +199,7 @@
 <p class="small muted">Received {{ r.totals.received_btc }} · paid out {{ r.totals.sent_btc }} · fees {{ r.totals.fees_btc }}. Net is what the wallet received minus what it spent, fees included; "internal" moves coins between the wallet's own addresses and costs only the fee.{% if r.fiat %} {{ r.fiat.currency }} at the rate in force on the transaction's day.{% endif %}</p>
 {% else %}<p class="muted">No transactions in the period; the closing balance equals the opening balance.</p>{% endif %}
 
-<h2>3. Holdings at the end of the period · {{ r.period.end.time_utc | utc }}</h2>
+<h2><span class="n">3.</span> Holdings at the end of the period · {{ r.period.end.time_utc | utc }}</h2>
 <p class="small muted">Coins exist on the chain as unspent transaction outputs, UTXOs: each is a fixed amount locked to one script, its scriptPubKey, until it is spent. The wallet's UTXOs at the end of the period; each link opens the transaction with the output's scriptPubKey shown:</p>
 <table>
   <colgroup><col style="width:44%"><col><col class="w-btc"></colgroup>
@@ -213,7 +227,7 @@
 {% set n = namespace(i=0) %}
 {% for a in r.closing.addresses %}{% for o in a.outputs %}{% set n.i = n.i + 1 %}
 <div class="page">
-<h2>4.{{ n.i }} UTXO {{ tx(o.txid) }}:{{ o.vout }}</h2>
+<h2><span class="n">4.{{ n.i }}</span> UTXO {{ tx(o.txid) }}:{{ o.vout }}</h2>
 <h3>Proof of control of the scriptPubKey</h3>
 <table class="coins">
   <colgroup><col style="width:14%"><col></colgroup>
@@ -258,7 +272,7 @@
 </div>
 {% endfor %}{% endfor %}
 
-<h2>5. Basis of preparation and limitations</h2>
+<h2><span class="n">5.</span> Basis of preparation and limitations</h2>
 <ul class="small">
   <li><strong>Point in time.</strong> Holdings are stated as of {{ r.period.end.time_utc | utc }} (block {{ r.period.end.height }}); nothing here says what the wallet holds after that.</li>
   <li><strong>Control, not title.</strong> A proof shows that the keys behind an address signed the message. It does not show who owns the coins, whether they are pledged, lent or otherwise encumbered, or what liabilities stand against them.</li>
@@ -268,7 +282,7 @@
   {% if r.fiat %}<li><strong>Fiat values</strong> are informational, from rates the holder supplied ({{ r.fiat.source }}), at the rate in force on each transaction's day.</li>{% endif %}
 </ul>
 
-<h2>6. Verification procedures</h2>
+<h2><span class="n">6.</span> Verification procedures</h2>
 <p class="small muted">Every figure and proof above is checkable on any Bitcoin node with the chain, without a wallet or an index.</p>
 <ol class="small">
   <li><strong>Proof of control, per UTXO.</strong> Run the <em>verify</em> command printed on the UTXO's page in section 4; its first argument is the scriptPubKey, the same bytes the <em>lookup</em> below it reports for the UTXO; it prints what is printed here, starting with VALID and ending with the tool and specification it ran under. Paste it as it stands: the backslashes continue the command across lines, and the message keeps its own line break inside the quotes. For a second opinion, <code>bip322-refcheck ADDRESS PROOF MESSAGE</code> runs independent implementations beside it, and <code>bitcoin-cli getblockheader HASH</code> with the hash from the message's last line confirms the block's height and time.</li>

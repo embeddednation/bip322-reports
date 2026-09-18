@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import csv
 import re
+import shutil
 from pathlib import Path
 
 from bip322audit.rpc import btc
@@ -59,6 +60,29 @@ _M = MARBER
 # across a page (scriptPubKey, block, proof, UTXO, amount): one thing, one
 # colour.  Solarized in the Solarized themes; The Economist's base colours in
 # the economist theme.
+#: Bundled typefaces (Adobe's Source family, SIL OFL; see fonts/LICENSE.md): the open
+#: counterparts of a newspaper's serif for reading, sans for labels and tables, mono for hashes.
+FONTS_DIR = Path(__file__).parent / "fonts"
+FONT_FACES = [  # family, file, weight, style
+    ("Source Serif 4", "SourceSerif4-Regular.woff2", 400, "normal"),
+    ("Source Serif 4", "SourceSerif4-It.woff2", 400, "italic"),
+    ("Source Serif 4", "SourceSerif4-Semibold.woff2", 600, "normal"),
+    ("Source Serif 4", "SourceSerif4-Bold.woff2", 700, "normal"),
+    ("Source Sans 3", "SourceSans3-Regular.woff2", 400, "normal"),
+    ("Source Sans 3", "SourceSans3-It.woff2", 400, "italic"),
+    ("Source Sans 3", "SourceSans3-Semibold.woff2", 600, "normal"),
+    ("Source Sans 3", "SourceSans3-Bold.woff2", 700, "normal"),
+    ("Source Code Pro", "SourceCodePro-Regular.woff2", 400, "normal"),
+    ("Source Code Pro", "SourceCodePro-Bold.woff2", 700, "normal"),
+]
+SANS = '"Source Sans 3", "Helvetica Neue", Arial, "DejaVu Sans", sans-serif'
+SERIF = '"Source Serif 4", Georgia, "Times New Roman", "DejaVu Serif", serif'
+MONO = '"Source Code Pro", Menlo, Consolas, "DejaVu Sans Mono", monospace'
+
+#: How section headings are set: coloured text over a coloured rule; a red tab over a grey rule (The
+#: Economist's chart signature); black text with the section number in red; black text over a thin red rule.
+HEADINGS = ("underline", "tab", "number", "redrule")
+
 _SOLARIZED_VALUES = {
     "script": _S["blue"],
     "block": _S["magenta"],
@@ -68,6 +92,12 @@ _SOLARIZED_VALUES = {
     "good": _S["green"],
     "bad_text": _S["red"],
     "tab": None,
+    "heading": "underline",
+    "font_body": SANS,
+    "font_heading": SANS,
+    "font_label": SANS,
+    "font_mono": MONO,
+    "oldstyle": False,
 }
 THEMES = {
     "paper": {  # a white page; only the terminal blocks are Solarized light
@@ -148,16 +178,22 @@ THEMES = {
         "ok": _M["shanghai35"],
         "bad": _M["red42"],
         "on_pill": "#ffffff",
-        # the values: the base colours that carry text on a light canvas; the proof, a blob the reader
-        # only matches with the row above it, stays grey so that the other four stand out
+        # the values: the base colours that carry text on a light canvas, and the brand red for the block
         "script": _M["chicago45"],
-        "block": _M["tokyo45"],
-        "proof": _M["london35"],
-        "utxo": _M["hongkong35"],
+        "block": _M["red"],
+        "proof": _M["hongkong35"],
+        "utxo": _M["chicago20"],
         "amount": _M["shanghai35"],
         "good": _M["shanghai35"],
-        "bad_text": _M["red42"],
+        "bad_text": _M["tokyo45"],
         "tab": _M["red"],
+        "heading": "number",
+        # like Economist Serif and Sans: serif for reading and headlines, sans for labels, tables and metadata
+        "font_body": SERIF,
+        "font_heading": SERIF,
+        "font_label": SANS,
+        "font_mono": MONO,
+        "oldstyle": True,
     },
 }
 
@@ -222,10 +258,32 @@ def _highlight(text: str, tokens: list) -> Markup:
     return Markup("").join(parts)
 
 
-def render_html(report: dict, *, explorer: str | None = "https://mempool.space", theme: str = "light") -> str:
+def render_html(
+    report: dict,
+    *,
+    explorer: str | None = "https://mempool.space",
+    theme: str = "light",
+    heading: str | None = None,
+    fonts_url: str = "fonts/",
+) -> str:
+    """The statement as HTML.  Fonts are referenced at ``fonts_url`` (see ``copy_fonts``); ``heading`` overrides the theme's heading style."""
     if theme not in THEMES:
         raise ValueError(f"unknown theme {theme!r}; one of {', '.join(THEMES)}")
-    return _env().get_template("report.html").render(r=report, explorer=(explorer or "").rstrip("/") or None, t=THEMES[theme])
+    if heading is not None and heading not in HEADINGS:
+        raise ValueError(f"unknown heading style {heading!r}; one of {', '.join(HEADINGS)}")
+    t = {**THEMES[theme], "heading": heading or THEMES[theme]["heading"]}
+    faces = [{"family": f, "url": fonts_url + file, "weight": w, "style": s} for f, file, w, s in FONT_FACES]
+    return _env().get_template("report.html").render(r=report, explorer=(explorer or "").rstrip("/") or None, t=t, faces=faces)
+
+
+def copy_fonts(directory: Path) -> Path:
+    """Put the bundled fonts next to a report, in ``fonts/``, where its HTML and PDF find them."""
+    target = directory / "fonts"
+    target.mkdir(parents=True, exist_ok=True)
+    for _family, file, _w, _s in FONT_FACES:
+        shutil.copyfile(FONTS_DIR / file, target / file)
+    shutil.copyfile(FONTS_DIR / "LICENSE.md", target / "LICENSE.md")
+    return target
 
 
 def write_csv(report: dict, path: Path) -> None:
@@ -248,10 +306,11 @@ def write_csv(report: dict, path: Path) -> None:
 
 
 def write_pdf(html: str, path: Path) -> None:
+    """Render the HTML to ``path``; relative URLs in it (the fonts) resolve next to ``path``."""
     try:
         from weasyprint import HTML
     except Exception as exc:  # ImportError, or an OSError when its system libraries (Pango) are missing
         raise RuntimeError(
             f"PDF output needs WeasyPrint and its system libraries: pip install 'bip322-reports[pdf]' (see the README) [{exc}]"
         ) from exc
-    HTML(string=html).write_pdf(str(path))
+    HTML(string=html, base_url=str(path.parent) + "/").write_pdf(str(path))

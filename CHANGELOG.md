@@ -1,5 +1,19 @@
 # Changelog
 
+## 0.6.5 (2026-09-18)
+
+- Bundled typefaces, embedded in the PDF and copied to `<out>/fonts/` for
+  the HTML: Source Serif 4, Source Sans 3, Source Code Pro (SIL OFL,
+  `bip322reports/fonts/LICENSE.md`). The Solarized themes are set in the
+  sans and the mono; the economist theme in the serif for reading and
+  headlines and the sans for labels, tables and metadata, with oldstyle
+  figures in running text, as The Economist's own typography prescribes.
+- `--heading number|tab|redrule|underline` for the section headings; the
+  economist theme's default is `number` (the section number in Economist
+  Red, no rules), the Solarized themes' `underline`.
+- economist theme: the proof has its colour again (Hong Kong teal); the
+  block is Economist Red, the UTXO Chicago navy; the eyebrow is red.
+
 ## 0.6.4 (2026-09-18)
 
 - `--theme economist`: The Economist's Marber palette over the whole page;
