@@ -24,7 +24,7 @@ One line, into a fresh venv; bip322-audit and bip322-core come along at their
 pinned tags, and the three commands land in the venv's `bin`:
 
 ```sh
-python3 -m venv ~/.bip322 && ~/.bip322/bin/pip install "bip322-reports[kernel] @ git+ssh://git@github.com/embeddednation/bip322-reports.git@v0.5.2"
+python3 -m venv ~/.bip322 && ~/.bip322/bin/pip install "bip322-reports[kernel] @ git+ssh://git@github.com/embeddednation/bip322-reports.git@v0.5.3"
 export PATH="$HOME/.bip322/bin:$PATH"
 bip322 engines && bip322-audit help && bip322-reports help
 ```

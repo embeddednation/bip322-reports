@@ -60,6 +60,7 @@
   code.msg { white-space: pre-wrap; display: block; }
   .page { break-before: page; }
   .page h2 { font-size: 10.5pt; font-family: "JetBrains Mono", Menlo, Consolas, "DejaVu Sans Mono", monospace; overflow-wrap: anywhere; word-break: break-all; }
+  .page h2 .mono { font: inherit; }
   pre { margin: 2px 0; font-family: "JetBrains Mono", Menlo, Consolas, "DejaVu Sans Mono", monospace; font-size: 7.6pt; line-height: 1.35; white-space: pre; overflow-x: hidden; }
   pre.out { white-space: pre-wrap; overflow-wrap: anywhere; }
   pre.cmd { background: #f2f3f5; padding: 4px 6px; border-radius: 3px; }
@@ -199,13 +200,13 @@
 {% set n = namespace(i=0) %}
 {% for a in r.closing.addresses %}{% for o in a.outputs %}{% set n.i = n.i + 1 %}
 <div class="page">
-<h2>4.{{ n.i }} UTXO {{ o.txid }}:{{ o.vout }}</h2>
-<p class="small muted">{{ o.amount_btc }}, received {{ o.created_utc | utc }}, locked to the scriptPubKey <span class="mono">{{ a.script.script_pubkey or "?" }}</span>. First the proof that the holder controls that scriptPubKey; then the chain's record of the UTXO, which names the same scriptPubKey and the amount.</p>
+<h2>4.{{ n.i }} UTXO {{ tx(o.txid) }}:{{ o.vout }}</h2>
+<p class="small muted">{{ o.amount_btc }}, received {{ o.created_utc | utc }}. First the proof that the holder controls the scriptPubKey this UTXO is locked to; then the chain's record of the UTXO, which names the same scriptPubKey and the amount.</p>
 <h3>Proof of control of the scriptPubKey</h3>
 <table class="coins">
   <colgroup><col style="width:11%"><col></colgroup>
   <tbody>
-  <tr class="lead"><td class="k">script</td><td><span class="mono">{{ a.script.script_pubkey or "?" }}</span><br><span class="small muted">{{ a.script.type | upper if a.script.type else "" }} · encoded as the address {{ addr(a.address) }}</span></td></tr>
+  <tr class="lead"><td class="k">script</td><td class="addr">{{ spk(a.script.script_pubkey, o.txid) }}<br><span class="small muted">{{ a.script.type | upper if a.script.type else "" }}, the scriptPubKey</span></td></tr>
   {% if a.proof %}
   <tr><td class="k">message</td><td><code class="msg">{{ a.proof.message }}</code></td></tr>
   <tr><td class="k">proof</td><td><span class="mono">{{ a.proof.signature | breakable }}</span></td></tr>

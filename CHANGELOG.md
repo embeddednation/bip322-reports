@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.5.3 (2026-09-18)
+
+- UTXO pages: no address line; the scriptPubKey and the UTXO are set alike,
+  both linked to the transaction with details; the page heading links too.
+- Requires bip322-audit 0.10.2 (terser holdings status).
+
 ## 0.5.2 (2026-09-18)
 
 - Front page: opening balance, transactions, closing balance and the
