@@ -1,5 +1,19 @@
 # Changelog
 
+## 0.7.0 (2026-09-22)
+
+- The basis and procedures sections are gone; what mattered in them is a
+  short "Notes" block after section 4. Section 4, how a proof of control
+  works, is now detailed: the figure shows both virtual transactions field
+  by field (version, locktime, prevout, scriptSig, sequence, value,
+  scriptPubKey, the witness stack for this wallet's policy, OP_RETURN),
+  the proof, the UTXO on the chain and the verifier's four checks; the
+  prose follows the same order.
+- Sections 1 and 2 say the minimum: one line of totals with the
+  difference under the movements, and one line pointing at the UTXO pages
+  with the colour key under the holdings.
+- The period line carries UTC on both instants, in the same style.
+
 ## 0.6.9 (2026-09-18)
 
 - The period line reads as a range: the two instants in the strong colour

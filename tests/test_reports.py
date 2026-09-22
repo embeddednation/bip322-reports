@@ -142,7 +142,7 @@ def test_report_backs_every_closing_coin_with_a_verified_proof(tmp_path, wallet,
         and "Owner proof" in html
         and 'href="https://mempool.space/tx/' in html
     )
-    assert "verified" in html and "no proof" not in html
+    assert "VALID" in html and "no proof" not in html and "Attention" not in html
     assert report["report_id"] and len(report["report_id"]) == 16 and report["report_id"] in html and report["holder"] is None
     again = build_report(history, period, label="Treasury", ledger_roots=[ledger], cli=node, rates=Rates.constant_rate("SEK", "1000000"))
     assert again["report_id"] == report["report_id"]  # the same facts give the same reference, whenever generated
@@ -318,7 +318,7 @@ def test_change_address_proven_before_the_spend_covers_the_change_output(tmp_pat
     report40 = build_report(fetch_history(node40), period_for_heights(node40, 1000, 1020), label="T", ledger_roots=[ledger], cli=node40)
     assert report40["coverage"]["covered_after_period_count"] == 3 and "stamped after the period's end: 3/3" in format_summary(report40)
     assert all(c["proof"]["after_period"] and c["proof"]["bundle"] == "year-end/proofs.json" for c in report40["closing"]["coins"])
-    assert "after the period's end" in render_html(report40)
+    assert "Attention" not in render_html(report40) and "Attention" in render_html({**report40, "ok": False})
     assert by_out[("bb", 0)]["lists_output"] and not by_out[("bb", 0)]["before_output"]
     assert by_out[("ee", 0)] is None  # the internal move went to a3, never proven
     html = render_html(report)

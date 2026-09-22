@@ -166,10 +166,13 @@ The wallet is named by the node wallet's name; `--holder NAME` puts the holder's
   the period, UTXOs found on the chain, node cross-check, reconciliation)
   nothing says so beyond the figures; when one fails, an ATTENTION mark
   and a checklist with the failing item appear on the first page.
-* At the end, on a page of their own, the basis of preparation, how to
-  verify all of it independently, and a plain account of how a BIP-322
-  proof of control works (the message, the two virtual transactions, the
-  witness, the verification).
+* At the end, on a page of its own, section 4: how a BIP-322 proof of
+  control works, with a figure of the two virtual transactions field by
+  field (the message and its hash, to_spend, to_sign and its witness, the
+  UTXO on the chain under the same scriptPubKey, the verifier's four
+  checks), the prose to match, and what a proof shows and does not; then
+  brief notes: units, wallet and blocks, preparation, the files alongside
+  and the tools that check them.
 * Every movement: time, txid, kind (receive, send, internal), net, fee, the
   running balance, and for a payment the address paid.
 * How to verify all of it independently.

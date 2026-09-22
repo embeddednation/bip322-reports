@@ -124,7 +124,7 @@
   </div>
   <div class="result">{% if not r.ok %}<span class="pill bad">ATTENTION</span>{% endif %}</div>
 </div>
-<p class="period">{% if r.holder %}{{ r.holder }} · {% endif %}<span class="when">{{ r.period.start.time_utc[:19] | replace("T", " ") }}</span> – <span class="when">{{ r.period.end.time_utc[:19] | replace("T", " ") }}</span> UTC{% if r.chain != "main" %} · {{ r.chain }} chain{% endif %}</p>
+<p class="period">{% if r.holder %}{{ r.holder }} · {% endif %}<span class="when">{{ r.period.start.time_utc | utc }}</span> – <span class="when">{{ r.period.end.time_utc | utc }}</span>{% if r.chain != "main" %} · {{ r.chain }} chain{% endif %}</p>
 
 {% if not r.ok %}
 <h2 class="attention">Attention</h2>
@@ -177,13 +177,12 @@
   {% endif %}
   </tbody>
 </table>
-<p class="small muted">Received {{ r.totals.received_btc }} · paid out {{ r.totals.sent_btc }} · fees {{ r.totals.fees_btc }}.{% if r.reconciliation.ok %} The opening balance plus the net of the transactions meets the holdings on the chain at the closing block; difference {{ r.reconciliation.diff_sat | btc }}.{% endif %} Net is what the wallet received minus what it spent, fees included; "internal" moves coins between the wallet's own addresses and costs only the fee.{% if r.fiat %} {{ r.fiat.currency }} at the rate in force on the transaction's day.{% endif %}</p>
+<p class="small muted">Received {{ r.totals.received_btc }} · paid out {{ r.totals.sent_btc }} · fees {{ r.totals.fees_btc }}{% if r.reconciliation.ok %} · difference to the holdings on the chain {{ r.reconciliation.diff_sat | btc }}{% endif %}.{% if r.fiat %} {{ r.fiat.currency }} at the rate in force on the transaction's day.{% endif %}</p>
 {% else %}<p class="muted">No transactions in the period: the closing balance, {{ r.closing.total_btc }}, equals the opening balance{% if not r.reconciliation.ok %} <span class="bad">but the holdings on the chain differ by {{ r.reconciliation.diff_sat | btc | acct }}</span>{% endif %}.</p>{% endif %}
 </div>
 
 <div class="keep">
 <h2><span class="n">2.</span> Holdings at the end of the period · {{ r.period.end.time_utc | utc }}</h2>
-<p class="small muted">Coins exist on the chain as unspent transaction outputs, UTXOs: each is a fixed amount locked to one script, its scriptPubKey, until it is spent. The wallet's UTXOs at the end of the period; each link opens the transaction with the output's scriptPubKey shown:</p>
 <table>
   <colgroup><col style="width:44%"><col><col class="w-btc"></colgroup>
   <thead><tr><th>UTXO</th><th>Locked to (scriptPubKey)</th><th class="num">Amount</th></tr></thead>
@@ -196,7 +195,7 @@
   <tr class="total"><td colspan="2">Closing balance</td><td class="num">{{ r.closing.total_btc }}</td></tr>
   </tbody>
 </table>
-<p class="small muted">One page per UTXO follows (section 3): the proof that the holder controls the scriptPubKey the UTXO is locked to, dated by the block in its message, then the chain's record of the UTXO at that block. BIP-322 defines the proof for a scriptPubKey ("the key script to be proven"); the verification is run on those bytes, and the chain names the same bytes. One thing, one colour: <span class="hl-script">scriptPubKey</span>, <span class="hl-block">block</span>, <span class="hl-proof">proof</span>, <span class="hl-utxo">UTXO</span>, <span class="hl-amount">amount</span>. The commands' output is the finding; a note follows it only when something needs saying.</p>
+<p class="small muted">One page per UTXO follows: the proof of control of its scriptPubKey, then the chain's record of the UTXO at the block of the proof. One thing, one colour: <span class="hl-script">scriptPubKey</span>, <span class="hl-block">block</span>, <span class="hl-proof">proof</span>, <span class="hl-utxo">UTXO</span>, <span class="hl-amount">amount</span>.</p>
 {% if r.coverage.uncovered %}
 <p class="bad">UTXOs without a verified proof hold {{ r.coverage.uncovered_btc }}.</p>
 {% endif %}
@@ -257,85 +256,109 @@
 {% endfor %}{% endfor %}
 
 <div class="page">
-<h2><span class="n">4.</span> Basis of preparation and limitations</h2>
-<div class="small runin">
-  <p><strong>Amounts.</strong> BTC, exact to eight decimals (1 BTC = 100 000 000 satoshi); negative amounts in parentheses{% if r.fiat %}; {{ r.fiat.currency }} values from {{ r.fiat.source }}{% endif %}.</p>
-  <p><strong>Point in time.</strong> Opening figures are as of the period's first block, closing figures as of its last, block {{ r.period.end.height }} ({{ r.period.end.time_utc | utc }}){% if r.period.to_tip %}, the chain tip when the statement was prepared{% endif %}; nothing here says what the wallet holds after that.</p>
-  <p><strong>Wallet.</strong> {{ r.label }}{% if r.policy %}, addresses controlled by {{ r.policy }} keys{% endif %}, on the {{ r.chain }} chain. Prepared {{ r.generated_utc | utc }} by {{ r.tool }}; reference {{ r.report_id }}, derived from the figures stated.</p>
-  <p><strong>Control, not title.</strong> A proof shows that the keys behind an address signed the message. It does not show who owns the coins, whether they are pledged, lent or otherwise encumbered, or what liabilities stand against them.</p>
-  <p><strong>Completeness.</strong> The movements and holdings are those of this wallet as known to the holder's node. That the wallet is the holder's only one, or that all of its addresses are in the node, rests on the holder's representation; no cryptographic check establishes it.</p>
-  <p><strong>Scripts, addresses and UTXOs.</strong> BIP-322 defines a proof for a scriptPubKey, "the key script to be proven"; an address is that script, checksummed and encoded, and the proof is not about any particular coin. Coins are UTXOs, each locked to exactly one scriptPubKey, which the node reports. Each page of section 3 reads the UTXO's scriptPubKey from the chain and runs the verifier on those same bytes; control of the script is therefore control of the UTXO. A script proven once is covered for every UTXO paid to it, before or after the proof; the date of each proof is the block named in its message.</p>
-  <p><strong>No wallet structure is disclosed.</strong> The statement and the bundles name addresses and outputs only; they carry no descriptor, extended public key or derivation path.</p>
-  {% if r.fiat %}<li><strong>Fiat values</strong> are informational, from rates the holder supplied ({{ r.fiat.source }}), at the rate in force on each transaction's day.</p>{% endif %}
-</div>
-
-<h2><span class="n">5.</span> Verification procedures</h2>
-<p class="small muted">Every figure and proof above is checkable on any Bitcoin node with the chain, without a wallet or an index. Section 6 explains what a proof is.</p>
-<div class="small runin">
-  <p><strong>Proof of control, per UTXO.</strong> Run the <em>verify</em> command printed on the UTXO's page in section 3; its first argument is the scriptPubKey, the same bytes the <em>lookup</em> below it reports for the UTXO; it prints what is printed here, starting with VALID and ending with the tool and specification it ran under. Paste it as it stands: the backslashes continue the command across lines, and the message keeps its own line break inside the quotes. For a second opinion, <code>bip322-refcheck ADDRESS PROOF MESSAGE</code> runs independent implementations beside it, and <code>bitcoin-cli getblockheader HASH</code> with the hash from the message's last line confirms the block's height and time.</p>
-  <p><strong>Holdings, per UTXO.</strong> Run the <em>lookup</em> command printed on the UTXO's page (a direct lookup, instant); its <code>--at</code> is the block named in the proof's message, so control and holding are checked at one block. Its "locked to" line is the scriptPubKey the proof is verified against; the address beneath it is the same bytes encoded, and <code>bip322 validateaddress</code> or <code>bitcoin-cli validateaddress</code> converts between the two. To look inside a proof, <code>bip322 decodesignature PROOF --text</code> shows the witness script it carries and derives the scriptPubKey from it. An output spent after the period's end no longer shows; <code>{{ r.name | default("report") }}.json</code> names the transaction that spent it. The same by address, <code>bip322 audit holdings ADDRESS --at BLOCK</code>, scans the whole UTXO set and takes minutes on a mainnet node.</p>
-  <p><strong>Movements.</strong> Each transaction in section 1 by txid; the running balance follows from the opening balance and the net of each.</p>
-  <p><strong>All of it at once.</strong> The proofs come as files next to this statement{% if r.bundles %}: {% for b in r.bundles %}<code>ledger/{{ b.bundle }}</code>{% if not loop.last %}, {% endif %}{% endfor %}{% endif %}. <code>bip322-audit verify FILE</code> checks every proof in a file, its stamp block, and that every output the file lists existed at that block. <code>{{ r.name | default("report") }}.json</code> carries every figure of this statement and its reference {{ r.report_id }}. Both tools install with <code>pip install bip322-reports</code>.</p>
-</div>
-
-<h2><span class="n">6.</span> How a proof of control works</h2>
-{% set m = t.muted %}{% set k = t.ink %}{% set st = t.strong %}{% set ln = t.rule_strong %}
-<svg class="fig" viewBox="0 0 700 262" xmlns="http://www.w3.org/2000/svg" font-family="{{ t.font_label | safe }}" font-size="10">
+<h2><span class="n">4.</span> How a proof of control works</h2>
+{% set m = t.muted %}{% set k = t.ink %}{% set st = t.strong %}{% set ln = t.rule_strong %}{% set mono = t.font_mono | safe %}
+{% set amount = r.closing.coins[0].amount_btc if r.closing.coins else "0.10000000" %}
+<svg class="fig" viewBox="0 0 700 430" xmlns="http://www.w3.org/2000/svg" font-family="{{ t.font_label | safe }}" font-size="10">
   <defs><marker id="arr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="{{ m }}"/></marker></defs>
   <!-- the message -->
-  <rect x="1" y="36" width="178" height="82" rx="3" fill="none" stroke="{{ ln }}"/>
-  <text x="11" y="54" font-weight="700" fill="{{ st }}">Message</text>
-  <text x="11" y="72" font-family="{{ t.font_mono | safe }}" font-size="8.5" fill="{{ k }}">Proof of control 2026</text>
-  <text x="11" y="86" font-family="{{ t.font_mono | safe }}" font-size="8.5" fill="{{ k }}">block:</text>
-  <text x="47" y="86" font-family="{{ t.font_mono | safe }}" font-size="8.5" fill="{{ t.block }}">{{ r.period.end.height }} 000000…</text>
-  <text x="11" y="106" fill="{{ m }}">the block dates the proof</text>
-  <line x1="180" y1="77" x2="226" y2="77" stroke="{{ m }}" marker-end="url(#arr)"/>
-  <text x="203" y="70" text-anchor="middle" fill="{{ m }}" font-size="8.5">hash</text>
+  <rect x="1" y="30" width="190" height="110" rx="3" fill="none" stroke="{{ ln }}"/>
+  <text x="11" y="48" font-weight="700" fill="{{ st }}">Message</text>
+  <text x="11" y="66" font-family="{{ mono }}" font-size="9" fill="{{ k }}">Proof of control 2026</text>
+  <text x="11" y="80" font-family="{{ mono }}" font-size="9" fill="{{ k }}">block:</text>
+  <text x="49" y="80" font-family="{{ mono }}" font-size="9" fill="{{ t.block }}">{{ r.period.end.height }} 000000…</text>
+  <text x="11" y="98" fill="{{ m }}">the block dates the proof</text>
+  <text x="11" y="116" fill="{{ m }}">hash: SHA-256, tagged</text>
+  <text x="11" y="130" font-family="{{ mono }}" font-size="9" fill="{{ m }}">BIP0322-signed-message</text>
+  <line x1="192" y1="85" x2="231" y2="85" stroke="{{ m }}" marker-end="url(#arr)"/>
+  <text x="211" y="78" text-anchor="middle" fill="{{ m }}" font-size="8.5">hash</text>
   <!-- to_spend -->
-  <rect x="230" y="1" width="232" height="118" rx="3" fill="none" stroke="{{ ln }}"/>
-  <text x="240" y="19" font-weight="700" fill="{{ st }}">to_spend <tspan font-weight="400" fill="{{ m }}">virtual, never broadcast</tspan></text>
-  <text x="240" y="41" fill="{{ k }}">input: no coin at all (the null outpoint),</text>
-  <text x="240" y="55" fill="{{ k }}">its script carries the hash of the message</text>
-  <text x="240" y="79" fill="{{ k }}">output: 0 BTC, locked to the</text>
-  <text x="240" y="93" fill="{{ t.script }}" font-weight="600">scriptPubKey being proven</text>
-  <text x="240" y="110" fill="{{ m }}">a lock with nothing in it</text>
-  <line x1="346" y1="120" x2="346" y2="150" stroke="{{ m }}" marker-end="url(#arr)"/>
-  <text x="354" y="139" fill="{{ m }}" font-size="8.5">spends it</text>
+  <rect x="235" y="1" width="240" height="169" rx="3" fill="none" stroke="{{ ln }}"/>
+  <text x="245" y="19" font-weight="700" fill="{{ st }}">to_spend <tspan font-weight="400" fill="{{ m }}">virtual, never broadcast</tspan></text>
+  <text x="245" y="37" font-family="{{ mono }}" font-size="9" fill="{{ k }}">version 0 · locktime 0</text>
+  <text x="245" y="55" font-weight="600" fill="{{ k }}">input</text>
+  <text x="285" y="55" font-family="{{ mono }}" font-size="9" fill="{{ k }}">prevout 0000…0000:ffffffff</text>
+  <text x="285" y="69" font-family="{{ mono }}" font-size="9" fill="{{ m }}">(the null outpoint: no coin)</text>
+  <text x="285" y="83" font-family="{{ mono }}" font-size="9" fill="{{ k }}">scriptSig OP_0 &lt;hash of message&gt;</text>
+  <text x="285" y="97" font-family="{{ mono }}" font-size="9" fill="{{ k }}">sequence 0</text>
+  <text x="245" y="117" font-weight="600" fill="{{ k }}">output</text>
+  <text x="285" y="117" font-family="{{ mono }}" font-size="9" fill="{{ k }}">value 0 sat</text>
+  <text x="285" y="131" font-family="{{ mono }}" font-size="9" fill="{{ t.script }}" font-weight="700">scriptPubKey OP_0 &lt;sha256(script)&gt;</text>
+  <text x="245" y="151" fill="{{ m }}">the lock being proven, with nothing in it;</text>
+  <text x="245" y="163" fill="{{ m }}">txid follows from message and scriptPubKey</text>
+  <!-- on the chain -->
+  <rect x="520" y="1" width="179" height="169" rx="3" fill="none" stroke="{{ ln }}"/>
+  <text x="530" y="19" font-weight="700" fill="{{ st }}">On the chain</text>
+  <text x="530" y="37" font-family="{{ mono }}" font-size="9" fill="{{ t.utxo }}" font-weight="700">UTXO txid:vout</text>
+  <text x="530" y="55" font-family="{{ mono }}" font-size="9" fill="{{ t.amount }}" font-weight="700">value {{ amount }} BTC</text>
+  <text x="530" y="73" font-family="{{ mono }}" font-size="9" fill="{{ t.script }}" font-weight="700">scriptPubKey</text>
+  <text x="530" y="87" font-family="{{ mono }}" font-size="9" fill="{{ t.script }}" font-weight="700">OP_0 &lt;sha256(script)&gt;</text>
+  <text x="530" y="111" fill="{{ m }}">the same lock: control of it</text>
+  <text x="530" y="125" fill="{{ m }}">is control of every coin</text>
+  <text x="530" y="139" fill="{{ m }}">behind it, before or after</text>
+  <text x="530" y="153" fill="{{ m }}">the proof</text>
+  <line x1="477" y1="128" x2="518" y2="128" stroke="{{ t.script }}" stroke-dasharray="3 3"/>
+  <text x="497" y="121" text-anchor="middle" fill="{{ t.script }}" font-size="8.5">same</text>
+  <line x1="355" y1="171" x2="355" y2="205" stroke="{{ m }}" marker-end="url(#arr)"/>
+  <text x="363" y="192" fill="{{ m }}" font-size="8.5">spends output 0</text>
+  <!-- the proof -->
+  <rect x="1" y="250" width="190" height="112" rx="3" fill="none" stroke="{{ ln }}"/>
+  <text x="11" y="268" font-weight="700" fill="{{ st }}">The proof</text>
+  <text x="11" y="286" font-family="{{ mono }}" font-size="9" fill="{{ t.proof }}" font-weight="700">smpBABHMEQCI…</text>
+  <text x="11" y="304" fill="{{ k }}">the witness of to_sign, serialised</text>
+  <text x="11" y="318" fill="{{ k }}">and base64-encoded, prefix smp</text>
+  <text x="11" y="338" fill="{{ m }}">all else is rebuilt from the</text>
+  <text x="11" y="352" fill="{{ m }}">message and the scriptPubKey</text>
+  <line x1="192" y1="306" x2="231" y2="306" stroke="{{ m }}" marker-end="url(#arr)"/>
   <!-- to_sign -->
-  <rect x="230" y="153" width="232" height="108" rx="3" fill="none" stroke="{{ ln }}"/>
-  <text x="240" y="171" font-weight="700" fill="{{ st }}">to_sign <tspan font-weight="400" fill="{{ m }}">virtual, never broadcast</tspan></text>
-  <text x="240" y="193" fill="{{ k }}">input: the output of to_spend, unlocked by</text>
-  <text x="240" y="207" fill="{{ k }}">a witness: signatures and script, exactly</text>
-  <text x="240" y="221" fill="{{ k }}">what a real spend would need</text>
-  <text x="240" y="243" fill="{{ t.proof }}" font-weight="600">that witness is the proof</text>
-  <text x="240" y="255" fill="{{ m }}" font-size="9">output: 0 BTC, unspendable</text>
-  <!-- the chain -->
-  <rect x="510" y="1" width="189" height="118" rx="3" fill="none" stroke="{{ ln }}"/>
-  <text x="520" y="19" font-weight="700" fill="{{ st }}">On the chain</text>
-  <text x="520" y="41" fill="{{ t.utxo }}" font-weight="600">UTXO txid:vout</text>
-  <text x="520" y="59" fill="{{ t.amount }}" font-weight="600">{{ r.closing.coins[0].amount_btc if r.closing.coins else "0.10000000" }} BTC</text>
-  <text x="520" y="79" fill="{{ k }}">locked to the same</text>
-  <text x="520" y="93" fill="{{ t.script }}" font-weight="600">scriptPubKey</text>
-  <line x1="463" y1="100" x2="508" y2="100" stroke="{{ t.script }}" stroke-dasharray="3 3"/>
-  <text x="486" y="92" text-anchor="middle" fill="{{ t.script }}" font-size="8.5">same lock</text>
+  <rect x="235" y="208" width="240" height="220" rx="3" fill="none" stroke="{{ ln }}"/>
+  <text x="245" y="226" font-weight="700" fill="{{ st }}">to_sign <tspan font-weight="400" fill="{{ m }}">virtual, never broadcast</tspan></text>
+  <text x="245" y="244" font-family="{{ mono }}" font-size="9" fill="{{ k }}">version 0 · locktime 0</text>
+  <text x="245" y="262" font-weight="600" fill="{{ k }}">input</text>
+  <text x="285" y="262" font-family="{{ mono }}" font-size="9" fill="{{ k }}">prevout &lt;txid of to_spend&gt;:0</text>
+  <text x="285" y="276" font-family="{{ mono }}" font-size="9" fill="{{ k }}">sequence 0</text>
+  <text x="285" y="290" font-family="{{ mono }}" font-size="9" fill="{{ t.proof }}" font-weight="700">witness</text>
+  <text x="299" y="304" font-family="{{ mono }}" font-size="9" fill="{{ t.proof }}">&lt;empty&gt;</text>
+  <text x="299" y="318" font-family="{{ mono }}" font-size="9" fill="{{ t.proof }}">&lt;signature, key A&gt;</text>
+  <text x="299" y="332" font-family="{{ mono }}" font-size="9" fill="{{ t.proof }}">&lt;signature, key C&gt;</text>
+  <text x="299" y="346" font-family="{{ mono }}" font-size="9" fill="{{ t.proof }}">&lt;script: 2 of {A, B, C}&gt;</text>
+  <text x="245" y="368" font-weight="600" fill="{{ k }}">output</text>
+  <text x="285" y="368" font-family="{{ mono }}" font-size="9" fill="{{ k }}">value 0 sat</text>
+  <text x="285" y="382" font-family="{{ mono }}" font-size="9" fill="{{ k }}">scriptPubKey OP_RETURN</text>
+  <text x="245" y="404" fill="{{ m }}">each signature commits to to_sign, so to</text>
+  <text x="245" y="418" fill="{{ m }}">to_spend's txid, so to the message</text>
+  <line x1="477" y1="306" x2="518" y2="306" stroke="{{ m }}" marker-end="url(#arr)"/>
   <!-- the verifier -->
-  <rect x="510" y="153" width="189" height="108" rx="3" fill="none" stroke="{{ ln }}"/>
-  <text x="520" y="171" font-weight="700" fill="{{ st }}">Verifier</text>
-  <text x="520" y="193" fill="{{ k }}">rebuilds both transactions from</text>
-  <text x="520" y="207" fill="{{ k }}">the message and the scriptPubKey,</text>
-  <text x="520" y="221" fill="{{ k }}">runs the consensus script engine</text>
-  <text x="520" y="235" fill="{{ k }}">on the witness</text>
-  <text x="520" y="253" fill="{{ t.good }}" font-weight="700">VALID</text>
-  <line x1="463" y1="207" x2="508" y2="207" stroke="{{ m }}" marker-end="url(#arr)"/>
+  <rect x="520" y="208" width="179" height="220" rx="3" fill="none" stroke="{{ ln }}"/>
+  <text x="530" y="226" font-weight="700" fill="{{ st }}">Verifier</text>
+  <text x="530" y="246" fill="{{ k }}">1  rebuilds to_spend from the</text>
+  <text x="530" y="259" fill="{{ k }}">    message and the scriptPubKey</text>
+  <text x="530" y="277" fill="{{ k }}">2  rebuilds to_sign, with the</text>
+  <text x="530" y="290" fill="{{ k }}">    proof as its witness</text>
+  <text x="530" y="308" fill="{{ k }}">3  sha256(script) must equal</text>
+  <text x="530" y="321" fill="{{ k }}">    the hash in the scriptPubKey</text>
+  <text x="530" y="339" fill="{{ k }}">4  2 of the 3 keys the script</text>
+  <text x="530" y="352" fill="{{ k }}">    names must have signed to_sign</text>
+  <text x="530" y="374" fill="{{ m }}">the consensus script engine,</text>
+  <text x="530" y="388" fill="{{ m }}">as for any spend on the network</text>
+  <text x="530" y="414" fill="{{ t.good }}" font-weight="700" font-size="11">VALID</text>
 </svg>
-<p class="caption">A proof of control is a spend of the scriptPubKey that can never happen: the coin it spends does not exist, but the witness is the one a real spend would need. The same scriptPubKey locks the UTXO on the chain.</p>
+<p class="caption">A proof of control is a spend from the scriptPubKey that can never happen: the coin it spends does not exist, but the witness is the one a real spend would need, and the same scriptPubKey locks the UTXO on the chain.</p>
 <div class="small runin">
-  <p><strong>Coins and scripts.</strong> A bitcoin balance is a set of unspent transaction outputs, UTXOs. Each carries an amount and a lock, its scriptPubKey: the script a spending transaction must satisfy, typically with signatures from particular keys. For a multisignature wallet the lock is a hash of the script that names the keys and the threshold ({{ r.policy or "m of n" }}); whoever can satisfy that script controls every UTXO locked to it. Control is therefore a property of the scriptPubKey, and that is what a proof is about.</p>
-  <p><strong>The message.</strong> The signers sign the text shown on each UTXO page: a title and a line naming a block by height, hash and time. The hash of a block cannot be known before the block exists, so a proof over it cannot have been made earlier; the block is the proof's date.</p>
-  <p><strong>The virtual transactions.</strong> BIP-322 turns the message into two transactions that never reach the network. The first, "to_spend", has one input that commits to the message (its script carries a tagged hash of the text, tag BIP0322-signed-message) and one output of zero value locked to the scriptPubKey being proven. The second, "to_sign", spends that output to an unspendable output. The first spends nothing that exists, so neither can ever be confirmed: a proof cannot move funds.</p>
-  <p><strong>The proof.</strong> The proof is the witness of "to_sign": exactly the signatures and, for a multisignature script, the script itself, that a real spend of a UTXO locked to the same scriptPubKey would require. It is encoded in base64 with the prefix <code>smp</code>, BIP-322's simple format. For a P2WSH lock the scriptPubKey is the SHA-256 of the script the proof carries; that is the link between the proof and the chain.</p>
-  <p><strong>Verification.</strong> A verifier rebuilds the two transactions from the message and the scriptPubKey, attaches the witness, and runs the consensus script engine as a node would on a real spend. VALID means the keys that control the script signed this message. The engines named in the output are independent implementations of that check, one of them Bitcoin Core's own consensus library.</p>
-  <p><strong>What it shows.</strong> That at the block named in the message the holder could produce a valid spend from the scriptPubKey, which is what controlling the UTXOs locked to it means. It does not show ownership, and it says nothing about any later time; a new proof over a new block does.</p>
+  <p><strong>Coins and locks.</strong> A balance is a set of unspent transaction outputs, UTXOs. Each carries an amount and a scriptPubKey, the condition a transaction spending it must meet. This wallet's condition is P2WSH: the scriptPubKey is <code>OP_0 &lt;SHA-256 of a witness script&gt;</code>, and the witness script says that {{ r.policy or "m of n" }} named public keys must sign. Whoever can meet the condition controls every UTXO locked to it, so control is a property of the scriptPubKey, and that is what a proof is about.</p>
+  <p><strong>The message.</strong> The text shown on each UTXO page: a title line, and a line naming a block by height, hash and time. The hash of a block cannot be known before the block exists, so the proof is no older than that block. The verifier hashes the message with SHA-256 under the tag <code>BIP0322-signed-message</code>.</p>
+  <p><strong>to_spend.</strong> Version 0, locktime 0. One input, spending the null outpoint (txid all zeros, index ffffffff), which no transaction has ever created; its scriptSig is <code>OP_0</code> followed by the 32-byte hash of the message; sequence 0. One output of 0 satoshi with the scriptPubKey being proven. The transaction's id follows from the message and the scriptPubKey alone.</p>
+  <p><strong>to_sign.</strong> Version 0, locktime 0. One input spending to_spend's output 0, sequence 0; one output of 0 satoshi to <code>OP_RETURN</code>, which nothing can spend. The input's witness is what the signers produce: for this wallet an empty element, {{ r.policy.split(" of ")[0] if r.policy else "m" }} signatures, and the witness script that names the {{ r.policy.split(" of ")[1] if r.policy else "n" }} keys; the same stack a real spend from the scriptPubKey carries. Each signature commits to to_sign, hence to to_spend's id, hence to the message.</p>
+  <p><strong>The proof.</strong> That witness, serialised as in a transaction and base64-encoded with the prefix <code>smp</code> (BIP-322's simple format, v2.0.0). Nothing else needs to be kept: the verifier rebuilds both transactions from the message and the scriptPubKey.</p>
+  <p><strong>Verification.</strong> The verifier rebuilds to_spend and to_sign, puts the witness on to_sign's input, and runs the consensus script engine on it exactly as a node validating a block would: the witness script must hash to the value in the scriptPubKey, the signatures must verify against keys the script names over to_sign's signature hash, and the threshold must be met. The engines named in each output do this independently; one of them is Bitcoin Core's own consensus library. Neither transaction spends a coin that exists, so neither can ever be confirmed: a proof cannot move funds.</p>
+  <p><strong>What it shows.</strong> That at the block named in the message the holder could produce a valid spend from the scriptPubKey, which is what controlling the UTXOs locked to it means; a UTXO confirmed after that block is covered by a later proof. Control, not title: not who owns the coins, nor what liabilities stand against them. Nothing about any time after the block; a new proof over a new block does.</p>
+</div>
+
+<h3>Notes</h3>
+<div class="small runin muted">
+  <p>Amounts in BTC, exact to eight decimals (1 BTC = 100 000 000 satoshi), negatives in parentheses{% if r.fiat %}; {{ r.fiat.currency }} values from {{ r.fiat.source }}, at the rate in force on each transaction's day{% endif %}. Net is what the wallet received less what it spent, fees included; "internal" moves coins within the wallet and costs only the fee.</p>
+  <p>Wallet {{ r.label }}{% if r.policy %}, addresses controlled by {{ r.policy }} keys{% endif %}, on the {{ r.chain }} chain; opening figures as of block {{ r.period.start.height }}, closing figures as of block {{ r.period.end.height }}{% if r.period.to_tip %}, the chain tip when the statement was prepared{% endif %}. Movements and holdings are those of this wallet as known to the holder's node; that it is the holder's only wallet rests on their representation. No descriptor, extended public key or derivation path is disclosed.</p>
+  <p>Prepared {{ r.generated_utc | utc }} by {{ r.tool }}; reference {{ r.report_id }}, derived from the figures stated. Alongside: <code>{{ r.name | default("report") }}.json</code> with every figure, <code>{{ r.name | default("report") }}.csv</code> with the movements, and the proofs{% if r.bundles %} as {% for b in r.bundles %}<code>ledger/{{ b.bundle }}</code>{% if not loop.last %}, {% endif %}{% endfor %}{% endif %}; <code>bip322-audit verify FILE</code> checks every proof in such a file against a node, <code>bip322-refcheck</code> runs independent implementations beside the verifier, and <code>bip322 audit holdings ADDRESS --at BLOCK</code> scans the UTXO set by address. The commands on the UTXO pages paste as they stand. All install with <code>pip install bip322-reports</code>.</p>
 </div>
 </div>
 </body>
