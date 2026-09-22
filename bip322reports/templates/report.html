@@ -95,9 +95,7 @@
   .hl-script { color: var(--c-script); } .hl-utxo { color: var(--c-utxo); } .hl-block { color: var(--c-block); }
   .hl-proof { color: var(--c-proof); } .hl-amount { color: var(--c-amount); }
   .hl-ok { color: var(--c-good); font-weight: 700; } .hl-bad { color: var(--c-bad); font-weight: 700; }
-  .chip { display: inline-block; padding: 0 4px; border-radius: 3px; font-family: var(--font-mono); font-size: 7.5pt; font-weight: 700; line-height: 1.5; white-space: nowrap; }
-  {% for role in ["script", "block", "proof", "utxo", "amount", "hash", "txid"] %}.chip-{{ role }} { color: {{ t[role] }}; background: {{ t.tint[role] }}; }
-  {% endfor %}
+  .hl-hash { color: {{ t.hash }}; } .hl-txid { color: {{ t.txid }}; }
   .badge { background: var(--bg); }
   .txcard .title { font-weight: 600; border-top: 2px solid var(--accent); padding-top: 4px; }
   a { color: inherit; text-decoration: none; }
@@ -261,11 +259,14 @@
 <div class="page">
 <h2><span class="n">4.</span> How a proof of control works</h2>
 {% set m = t.muted %}{% set k = t.ink %}{% set st = t.strong %}{% set ln = t.rule_strong %}{% set mono = t.font_mono | safe %}{% set tile = t.tile %}
-{% macro chip(x, y, w, text, role) -%}
-<rect x="{{ x }}" y="{{ y }}" width="{{ w }}" height="16" rx="3" fill="{{ t.tint[role] }}"/><text x="{{ x + 6 }}" y="{{ y + 12 }}" font-family="{{ mono }}" font-size="9" font-weight="700" fill="{{ t[role] }}">{{ text }}</text>
+{% macro val(x, y, text, role) -%}
+<text x="{{ x }}" y="{{ y }}" font-family="{{ mono }}" font-size="9" font-weight="700" fill="{{ t[role] }}">{{ text }}</text>
 {%- endmacro %}
 {% macro pill(x, y, w, text) -%}
 <rect x="{{ x }}" y="{{ y }}" width="{{ w }}" height="18" rx="9" fill="none" stroke="{{ m }}"/><text x="{{ x + w / 2 }}" y="{{ y + 12.5 }}" text-anchor="middle" font-size="8.5" fill="{{ m }}">{{ text }}</text>
+{%- endmacro %}
+{% macro field(x, y, name, value, role=None) -%}
+<text x="{{ x }}" y="{{ y }}" font-family="{{ mono }}" font-size="9" fill="{{ k }}">{{ name }}</text>{% if role %}{{ val(x + (name | length + 1) * 5.4, y, value, role) }}{% else %}<text x="{{ x + (name | length + 1) * 5.4 }}" y="{{ y }}" font-family="{{ mono }}" font-size="9" fill="{{ k }}">{{ value }}</text>{% endif %}
 {%- endmacro %}
 <svg class="fig" viewBox="0 0 700 486" xmlns="http://www.w3.org/2000/svg" font-family="{{ t.font_label | safe }}" font-size="10">
   <defs>
@@ -282,46 +283,41 @@
   <text x="11" y="112" fill="{{ m }}">and a block line, dating the proof</text>
   <line x1="96" y1="123" x2="96" y2="136" stroke="{{ m }}" marker-end="url(#arr)"/>
   {{ pill(2, 138, 188, "SHA-256, tagged BIP0322-signed-message") }}
-  <line x1="96" y1="157" x2="96" y2="161" stroke="{{ m }}"/>
-  {{ chip(49, 162, 94, "hash of message", "hash") }}
-  <line x1="144" y1="170" x2="233" y2="170" stroke="{{ m }}" marker-end="url(#arr)"/>
+  {{ val(45, 176, "<hash of message>", "hash") }}
+  <line x1="148" y1="172" x2="233" y2="172" stroke="{{ m }}" marker-end="url(#arr)"/>
   <!-- to_spend -->
   <rect x="235" y="1" width="240" height="204" rx="3" fill="none" stroke="{{ ln }}"/>
   <text x="245" y="19" font-weight="700" fill="{{ st }}">to_spend <tspan font-weight="400" fill="{{ m }}">a transaction never broadcast</tspan></text>
-  <text x="245" y="37" font-family="{{ mono }}" font-size="9" fill="{{ k }}">version 0 · locktime 0</text>
+  {{ field(245, 37, "version", "0 · locktime 0") }}
   <text x="245" y="59" font-weight="600" fill="{{ k }}">output</text>
-  <text x="290" y="59" font-family="{{ mono }}" font-size="9" fill="{{ k }}">value 0 sat</text>
-  {{ chip(290, 64, 176, "scriptPubKey being proven", "script") }}
-  <text x="245" y="97" fill="{{ m }}">the lock being proven, with nothing in it</text>
+  {{ field(290, 59, "value", "0 sat") }}
+  {{ field(290, 73, "scriptPubKey", "<lock being proven>", "script") }}
+  <text x="245" y="93" fill="{{ m }}">the lock, with nothing in it</text>
   <text x="245" y="119" font-weight="600" fill="{{ k }}">input</text>
-  <text x="290" y="119" font-family="{{ mono }}" font-size="9" fill="{{ k }}">prevout 0000…0000:ffffffff</text>
+  {{ field(290, 119, "prevout", "0000…0000:ffffffff") }}
   <text x="290" y="133" fill="{{ m }}">the null outpoint: no such coin</text>
-  <text x="290" y="147" font-family="{{ mono }}" font-size="9" fill="{{ k }}">sequence 0</text>
-  <text x="290" y="174" font-family="{{ mono }}" font-size="9" fill="{{ k }}">scriptSig OP_0</text>
-  {{ chip(372, 162, 94, "hash of message", "hash") }}
+  {{ field(290, 147, "sequence", "0") }}
+  {{ field(290, 176, "scriptSig OP_0", "<hash of message>", "hash") }}
   <text x="245" y="196" fill="{{ m }}">the message, committed to the transaction</text>
   <!-- txid of to_spend, consumed by to_sign -->
   <line x1="355" y1="206" x2="355" y2="214" stroke="{{ m }}"/>
   {{ pill(262, 216, 186, "SHA-256 twice, over the raw transaction") }}
-  <line x1="355" y1="235" x2="355" y2="239" stroke="{{ m }}"/>
-  {{ chip(305, 240, 100, "txid of to_spend", "txid") }}
+  {{ val(306, 252, "<txid of to_spend>", "txid") }}
   <line x1="355" y1="257" x2="355" y2="266" stroke="{{ m }}" marker-end="url(#arr)"/>
   <!-- to_sign -->
   <rect x="235" y="268" width="240" height="217" rx="3" fill="none" stroke="{{ ln }}"/>
   <text x="245" y="286" font-weight="700" fill="{{ st }}">to_sign <tspan font-weight="400" fill="{{ m }}">a transaction never broadcast</tspan></text>
-  <text x="245" y="304" font-family="{{ mono }}" font-size="9" fill="{{ k }}">version 0 · locktime 0</text>
+  {{ field(245, 304, "version", "0 · locktime 0") }}
   <text x="245" y="326" font-weight="600" fill="{{ k }}">input</text>
-  <text x="290" y="326" font-family="{{ mono }}" font-size="9" fill="{{ k }}">prevout</text>
-  {{ chip(338, 314, 100, "txid of to_spend", "txid") }}
-  <text x="441" y="326" font-family="{{ mono }}" font-size="9" fill="{{ k }}">:0</text>
-  <text x="290" y="344" font-family="{{ mono }}" font-size="9" fill="{{ k }}">sequence 0</text>
-  <text x="290" y="362" font-family="{{ mono }}" font-size="9" fill="{{ k }}">witness</text>
-  {{ chip(338, 350, 68, "the proof", "proof") }}
+  {{ field(290, 326, "prevout", "<txid of to_spend>", "txid") }}
+  <text x="430" y="326" font-family="{{ mono }}" font-size="9" fill="{{ k }}">:0</text>
+  {{ field(290, 340, "sequence", "0") }}
+  {{ field(290, 358, "witness", "<the proof>", "proof") }}
   <text x="245" y="380" fill="{{ m }}">what unlocks the scriptPubKey: signatures,</text>
   <text x="245" y="394" fill="{{ m }}">and keys or a script when it needs them</text>
   <text x="245" y="418" font-weight="600" fill="{{ k }}">output</text>
-  <text x="290" y="418" font-family="{{ mono }}" font-size="9" fill="{{ k }}">value 0 sat</text>
-  <text x="290" y="432" font-family="{{ mono }}" font-size="9" fill="{{ k }}">scriptPubKey OP_RETURN</text>
+  {{ field(290, 418, "value", "0 sat") }}
+  {{ field(290, 432, "scriptPubKey", "OP_RETURN") }}
   <text x="245" y="454" fill="{{ m }}">every signature commits to the txid above,</text>
   <text x="245" y="468" fill="{{ m }}">and so to the message</text>
   <!-- the proof -->
@@ -332,44 +328,45 @@
   <text x="11" y="368" fill="{{ k }}">and base64-encoded, prefix smp</text>
   <text x="11" y="388" fill="{{ m }}">what a real spend would carry</text>
   <line x1="192" y1="358" x2="233" y2="358" stroke="{{ t.proof }}" marker-end="url(#arrp)"/>
-  <!-- on the chain -->
+  <!-- on the chain: a real transaction, in the same form -->
   <rect x="520" y="1" width="179" height="204" rx="3" fill="none" stroke="{{ ln }}"/>
   <text x="530" y="19" font-weight="700" fill="{{ st }}">On the chain</text>
-  <text x="530" y="41" font-family="{{ mono }}" font-size="9" fill="{{ t.utxo }}" font-weight="700">UTXO txid:vout</text>
-  <text x="530" y="59" font-family="{{ mono }}" font-size="9" fill="{{ t.amount }}" font-weight="700">value  any amount</text>
-  {{ chip(530, 64, 160, "the same scriptPubKey", "script") }}
-  <text x="530" y="101" fill="{{ m }}">control of the lock is control</text>
-  <text x="530" y="115" fill="{{ m }}">of every coin behind it, before</text>
-  <text x="530" y="129" fill="{{ m }}">or after the proof was made</text>
-  <text x="530" y="155" fill="{{ m }}">any kind of lock the network</text>
-  <text x="530" y="169" fill="{{ m }}">accepts can be proven: a key</text>
-  <text x="530" y="183" fill="{{ m }}">hash, a script hash, taproot</text>
-  <line x1="468" y1="72" x2="528" y2="72" stroke="{{ t.script }}" stroke-dasharray="3 3"/>
+  <text x="530" y="33" fill="{{ m }}">a real transaction, confirmed</text>
+  <text x="530" y="59" font-weight="600" fill="{{ k }}">output</text>
+  {{ val(575, 59, "<txid>:<vout>", "utxo") }}
+  {{ field(530, 73, "value", "<any amount>", "amount") }}
+  {{ field(530, 87, "scriptPubKey", "<same lock>", "script") }}
+  <text x="530" y="111" fill="{{ m }}">control of the lock is control</text>
+  <text x="530" y="125" fill="{{ m }}">of every coin behind it, before</text>
+  <text x="530" y="139" fill="{{ m }}">or after the proof was made</text>
+  <text x="530" y="163" fill="{{ m }}">any kind of lock the network</text>
+  <text x="530" y="177" fill="{{ m }}">accepts can be proven: a key</text>
+  <text x="530" y="191" fill="{{ m }}">hash, a script hash, taproot</text>
+  <line x1="470" y1="70" x2="528" y2="84" stroke="{{ t.script }}" stroke-dasharray="3 3"/>
   <!-- the verifier -->
   <rect x="520" y="268" width="179" height="217" rx="3" fill="none" stroke="{{ ln }}"/>
   <text x="530" y="286" font-weight="700" fill="{{ st }}">Verifier</text>
-  <text x="530" y="306" fill="{{ k }}">1  rebuilds to_spend from</text>
-  {{ chip(542, 311, 94, "hash of message", "hash") }}
-  <text x="640" y="323" fill="{{ k }}">and</text>
-  {{ chip(542, 330, 77, "scriptPubKey", "script") }}
-  <text x="530" y="363" fill="{{ k }}">2  rebuilds to_sign from</text>
-  {{ chip(542, 368, 100, "txid of to_spend", "txid") }}
-  <text x="646" y="380" fill="{{ k }}">and</text>
-  {{ chip(542, 387, 68, "the proof", "proof") }}
-  <text x="530" y="420" fill="{{ k }}">3  runs the consensus script</text>
-  <text x="530" y="433" fill="{{ k }}">    engine on to_sign's input: the</text>
-  <text x="530" y="446" fill="{{ k }}">    proof must unlock the</text>
-  {{ chip(542, 451, 77, "scriptPubKey", "script") }}
-  <text x="623" y="463" fill="{{ k }}">as any real</text>
-  <text x="542" y="476" fill="{{ k }}">spend must</text>
-  <text x="640" y="476" fill="{{ t.good }}" font-weight="700" font-size="11">VALID</text>
-  <line x1="477" y1="358" x2="518" y2="358" stroke="{{ m }}" marker-end="url(#arr)"/>
+  <text x="530" y="308" fill="{{ k }}">1  rebuilds to_spend from</text>
+  {{ val(542, 322, "<hash of message>", "hash") }}
+  <text x="542" y="336" fill="{{ k }}">and</text>
+  {{ val(564, 336, "<lock being proven>", "script") }}
+  <text x="530" y="358" fill="{{ k }}">2  rebuilds to_sign from</text>
+  {{ val(542, 372, "<txid of to_spend>", "txid") }}
+  <text x="542" y="386" fill="{{ k }}">and</text>
+  {{ val(564, 386, "<the proof>", "proof") }}
+  <text x="530" y="408" fill="{{ k }}">3  runs the consensus script</text>
+  <text x="530" y="421" fill="{{ k }}">    engine on to_sign's input:</text>
+  {{ val(542, 434, "<the proof>", "proof") }}
+  <text x="606" y="434" fill="{{ k }}">must unlock</text>
+  {{ val(542, 447, "<lock being proven>", "script") }}
+  <text x="530" y="460" fill="{{ k }}">    as any real spend must</text>
+  <text x="530" y="478" fill="{{ m }}">the same rules, whatever the lock</text>
 </svg>
 <p class="caption">A proof of control is a spend from the scriptPubKey that can never happen: the coin it spends does not exist, but the witness is the one a real spend would need, and the same scriptPubKey locks the UTXOs on the chain. The mechanism is the same for every kind of scriptPubKey.</p>
 <div class="small runin">
   {% set S = '<span class="hl-script">scriptPubKey</span>' %}
-  {% set H = '<span class="chip chip-hash">hash of message</span>' %}
-  {% set X = '<span class="chip chip-txid">txid of to_spend</span>' %}
+  {% set H = '<span class="hl-hash">hash of the message</span>' %}
+  {% set X = '<span class="hl-txid">txid of to_spend</span>' %}
   {% set P = '<span class="hl-proof">proof</span>' %}
   {% set U = '<span class="hl-utxo">UTXO</span>' %}
   {% set B = '<span class="hl-block">block</span>' %}

@@ -261,8 +261,8 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument(
         "--theme",
         choices=("paper", "light", "dark", "economist"),
-        default="light",
-        help="page colours: Solarized light, white paper, Solarized dark, or The Economist's Marber palette (default %(default)s)",
+        default="economist",
+        help="page colours: The Economist's Marber palette, Solarized light, white paper or Solarized dark (default %(default)s)",
     )
     p.add_argument(
         "--heading",

@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.7.3 (2026-09-22)
+
+- The economist theme is the default.
+- Section 4: the hash and the txid are plain coloured text again, no
+  chips (economist: Tokyo wine and a dark gold made from New York yellow;
+  Solarized: cyan and yellow). The figure's fields all read `name value`,
+  names in ink and values in their colours, and the chain box is drawn as
+  a transaction in the same form (output, value, scriptPubKey). The
+  verifier box has no VALID.
+
 ## 0.7.2 (2026-09-22)
 
 - Two more value colours: the hash of the message and the txid of

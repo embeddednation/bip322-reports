@@ -143,12 +143,12 @@ The wallet is named by the node wallet's name; `--holder NAME` puts the holder's
   The values a reader matches by eye are coloured alike wherever they appear
   on the page (scriptPubKey, block, proof, UTXO, amount; the Solarized
   palette), and the commands and their output sit in terminal blocks in the
-  same palette. `--theme` picks Solarized light (the default), white paper,
-  Solarized dark, or `economist`: The Economist's Marber palette (Los
+  same palette. `--theme` picks `economist` (the default): The Economist's Marber palette (Los
   Angeles canvas, London greys, ruled tables, the values in the system's
   base colours with the brand red for the block) for the whole page, set
   in a serif for reading and a sans for labels and tables, as their own
-  Economist Serif and Sans are used. `--heading` picks how section
+  Economist Serif and Sans are used; or `light`, `dark` (Solarized) or
+  `paper` (white). `--heading` picks how section
   headings are set: `number` (the number in red), `tab` (a red tab over a
   grey rule, their chart signature), `redrule`, or `underline`.
 * Typefaces: Adobe's Source Serif 4 and Source Sans 3 and JetBrains Mono
