@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.7.4 (2026-09-22)
+
+- Section 4's figure draws the chain's transaction in the same form as
+  to_spend and to_sign (version, input with prevout, sequence and witness,
+  output with value and scriptPubKey), with its own SHA-256 twice giving
+  the txid, and `<txid>:<vout>`, the UTXO, flowing into a fourth verifier
+  step: the lookup, which finds it unspent with `<locked amount>` behind
+  `<scriptPubKey>`. The scriptPubKey is the one token `<scriptPubKey>`
+  wherever it appears. The prose says which steps are which command.
+
 ## 0.7.3 (2026-09-22)
 
 - The economist theme is the default.
