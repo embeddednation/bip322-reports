@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.7.2 (2026-09-22)
+
+- Two more value colours: the hash of the message and the txid of
+  to_spend, always set as chips (bold mono on a tint of the colour; the
+  tint is mixed from the theme's page colour, so it works on every theme).
+  Solarized: cyan and yellow; economist: Tokyo wine, and London text on a
+  New York yellow chip. The figure's verifier box now names what it
+  consumes with the same chips, and the prose of section 4 carries the
+  colours: scriptPubKey, block, proof, UTXO in their text colours, hash
+  and txid as chips.
+
 ## 0.7.1 (2026-09-22)
 
 - Section 4 is about BIP-322 for any scriptPubKey; this wallet's P2WSH

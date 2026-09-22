@@ -50,6 +50,7 @@ MARBER = {  # The Economist's Marber design system: the brand red, "base" colour
     "london70": "#B3B3B3",
     "london85": "#D9D9D9",
     "london95": "#F2F2F2",
+    "newyork90": "#FEF2CD",
     "losangeles85": "#E1DFD0",
     "losangeles90": "#EBE9E0",
     "losangeles95": "#F5F4EF",
@@ -83,12 +84,26 @@ MONO = '"JetBrains Mono", Menlo, Consolas, "DejaVu Sans Mono", monospace'
 #: Economist's chart signature); black text with the section number in red; black text over a thin red rule.
 HEADINGS = ("underline", "tab", "number", "redrule")
 
+#: The values a reader matches across the statement, each with one colour.  The two derived ones, the
+#: hash of the message and the txid of to_spend, are always set as chips (text on a tint of the colour).
+VALUE_ROLES = ("script", "block", "proof", "utxo", "amount", "hash", "txid")
+
+
+def _mix(color: str, base: str, weight: float) -> str:
+    """``weight`` of ``color`` over ``base``, both ``#rrggbb``: the tint a chip is filled with."""
+    c = [int(color[i : i + 2], 16) for i in (1, 3, 5)]
+    b = [int(base[i : i + 2], 16) for i in (1, 3, 5)]
+    return "#" + "".join(f"{round(x * weight + y * (1 - weight)):02x}" for x, y in zip(c, b))
+
+
 _SOLARIZED_VALUES = {
     "script": _S["blue"],
     "block": _S["magenta"],
     "proof": _S["violet"],
     "utxo": _S["orange"],
     "amount": _S["green"],
+    "hash": _S["cyan"],
+    "txid": _S["yellow"],
     "good": _S["green"],
     "bad_text": _S["red"],
     "tab": None,
@@ -185,6 +200,9 @@ THEMES = {
         "proof": _M["singapore55"],
         "utxo": _M["hongkong35"],
         "amount": _M["shanghai35"],
+        "hash": _M["tokyo35"],
+        "txid": _M["london20"],
+        "tint": {"txid": _M["newyork90"]},  # a yellow chip: the palette has no dark yellow for text
         "good": _M["shanghai35"],
         "bad_text": _M["tokyo45"],
         "tab": _M["red"],
@@ -273,6 +291,7 @@ def render_html(
     if heading is not None and heading not in HEADINGS:
         raise ValueError(f"unknown heading style {heading!r}; one of {', '.join(HEADINGS)}")
     t = {**THEMES[theme], "heading": heading or THEMES[theme]["heading"]}
+    t["tint"] = {role: _mix(t[role], t["bg"], 0.16) for role in VALUE_ROLES} | dict(t.get("tint") or {})
     faces = [{"family": f, "url": fonts_url + file, "weight": w, "style": s} for f, file, w, s in FONT_FACES]
     return _env().get_template("report.html").render(r=report, explorer=(explorer or "").rstrip("/") or None, t=t, faces=faces)
 
