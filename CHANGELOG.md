@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.7.1 (2026-09-22)
+
+- Section 4 is about BIP-322 for any scriptPubKey; this wallet's P2WSH
+  multisig is the example, not the subject. The figure shows the data
+  flowing between the parts as chips: the message through the tagged
+  SHA-256 into to_spend's scriptSig, to_spend's txid (SHA-256 twice over
+  its bytes) into to_sign's prevout, the proof into to_sign's witness,
+  the scriptPubKey shared with the UTXO on the chain, which no longer
+  shows a value from the wallet.
+
 ## 0.7.0 (2026-09-22)
 
 - The basis and procedures sections are gone; what mattered in them is a
