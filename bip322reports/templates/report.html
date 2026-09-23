@@ -168,7 +168,7 @@
   <tr class="open"><td colspan="5">Opening balance, {{ r.period.start.time_utc | utc }}</td><td class="num">{{ r.opening.total_btc }}</td>{% if r.fiat %}<td></td>{% endif %}</tr>
   {% for t in r.transactions %}
   <tr><td>{{ t.time_utc[:10] }}<br><span class="muted">{{ t.time_utc[11:19] }}</span></td>
-      <td>{{ tx(t.txid) }}{% for c in t.others_out %}<br><span class="small muted">paid to</span> {{ addr(c.address) }} <span class="small muted">{{ c.amount_btc }}</span>{% endfor %}</td>
+      <td>{{ tx(t.txid) }}</td>
       <td>{{ t.kind }}</td><td class="num">{{ t.net_btc | acct }}</td><td class="num">{{ t.fee_btc or "" }}</td><td class="num">{{ t.balance_after_btc }}</td>
     {% if r.fiat %}<td class="num">{{ (t.fiat.net | acct) if t.fiat.net else "" }}</td>{% endif %}</tr>
   {% endfor %}
@@ -256,7 +256,8 @@
 </div>
 {% endfor %}{% endfor %}
 
-<div class="page">
+<div class="{% if r.closing.coins %}page{% endif %}">
+{% if r.closing.coins %}
 <h2><span class="n">4.</span> How a proof of control works</h2>
 {% set m = t.muted %}{% set k = t.ink %}{% set st = t.strong %}{% set ln = t.rule_strong %}{% set mono = t.font_mono | safe %}{% set tile = t.tile %}
 {% macro val(x, y, text, role) -%}
@@ -381,11 +382,12 @@
   <p><strong>What it shows.</strong> That at the {{ B | safe }} named in the message the holder could produce a valid spend from the {{ S | safe }}, which is what controlling the {{ U | safe }}s locked to it means; a {{ U | safe }} confirmed after that {{ B | safe }} is covered by a later {{ P | safe }}. Control, not title: not who owns the coins, nor what liabilities stand against them. Nothing about any time after the {{ B | safe }}; a new {{ P | safe }} over a new {{ B | safe }} does.</p>
 </div>
 
+{% endif %}
 <h3>Notes</h3>
 <div class="small runin muted">
   <p>Amounts in BTC to eight decimals, negatives in parentheses{% if r.fiat %}; {{ r.fiat.currency }} from {{ r.fiat.source }} at the rate on each transaction's day{% endif %}. Net is received less spent, fees included.</p>
   <p>Wallet {{ r.label }}{% if r.policy == "1 of 1" %}, single key{% elif r.policy %}, {{ r.policy }} keys{% endif %}, {{ r.chain }} chain; opening figures at block {{ r.period.start.height }}, closing at block {{ r.period.end.height }}{% if r.period.to_tip %}, the tip when prepared{% endif %}. Holdings and movements as known to the holder's node; no descriptor or extended public key is disclosed.</p>
-  <p>Prepared {{ r.generated_utc | utc }} by {{ r.tool }}; reference {{ r.report_id }}. With this statement: <code>{{ r.name | default("report") }}.json</code>, <code>{{ r.name | default("report") }}.csv</code>{% if r.bundles %} and the proofs, {% for b in r.bundles %}<code>ledger/{{ b.bundle }}</code>{% if not loop.last %}, {% endif %}{% endfor %}{% endif %}; <code>bip322-audit verify FILE</code> checks a proofs file against a node, and the commands on the UTXO pages paste as they stand. <code>pip install bip322-reports</code>.</p>
+  <p>Prepared {{ r.generated_utc | utc }} by {{ r.tool }}; reference {{ r.report_id }}. With this statement: <code>{{ r.name | default("report") }}.json</code>, <code>{{ r.name | default("report") }}.csv</code>{% if r.bundles %} and the proofs, {% for b in r.bundles %}<code>ledger/{{ b.bundle }}</code>{% if not loop.last %}, {% endif %}{% endfor %}{% endif %}; <code>bip322-audit verify FILE</code> checks a proofs file against a node{% if r.closing.coins %}, and the commands on the UTXO pages paste as they stand{% endif %}. <code>pip install bip322-reports</code>.</p>
 </div>
 </div>
 </body>

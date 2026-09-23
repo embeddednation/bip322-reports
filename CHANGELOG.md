@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.7.12 (2026-09-23)
+
+- The movements table no longer lists the payee under a send (the CSV and
+  the JSON still carry it). A statement with no closing holdings has no
+  section 4; its notes follow section 2 on the same page.
+
 ## 0.7.11 (2026-09-23)
 
 - The notes call a P2WPKH wallet "single key" rather than "1 of 1 keys".
