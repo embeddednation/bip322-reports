@@ -151,7 +151,7 @@ def test_report_backs_every_closing_coin_with_a_verified_proof(tmp_path, wallet,
     assert by_out[("dd", 1)]["bundle"].endswith("snapshot-2/proofs.json") and by_out[("dd", 1)]["stamp"]["height"] == 1014
     assert [b["used_for"] for b in report["bundles"]] == [1, 2] and report["pending_bundles"] == ["snapshot-3"]
     dd = next(t for t in report["transactions"] if t["txid"].startswith("dd"))
-    assert dd["fiat"] == {"currency": "SEK", "rate": "1000000", "net": "-210000.00", "fee": "10000.00"}
+    assert dd["fiat"] == {"currency": "SEK", "rate": "1000000", "amount": "-200000.00", "net": "-210000.00", "fee": "10000.00"}
 
     html = render_html(report)
     assert (
@@ -166,7 +166,7 @@ def test_report_backs_every_closing_coin_with_a_verified_proof(tmp_path, wallet,
     again = build_report(history, period, label="Treasury", ledger_roots=[ledger], cli=node, rates=Rates.constant_rate("SEK", "1000000"))
     assert again["report_id"] == report["report_id"]  # the same facts give the same reference, whenever generated
     assert [t["balance_after_sat"] for t in report["transactions"]] == [64_000_000, 63_900_000]  # a running balance
-    assert "(0.21000000)" in html  # accounting negatives in the statement
+    assert "(0.20000000)" in html and "(0.01000000)" in html  # the amount sent and the fee, both in accounting parentheses
     with_holder = render_html(build_report(history, period, label="Treasury", holder="Demo Holdings AB", ledger_roots=[ledger], cli=node))
     assert "Demo Holdings AB" in with_holder
     assert 'href="https://mempool.space' not in render_html(report, explorer="")
@@ -177,7 +177,7 @@ def test_report_backs_every_closing_coin_with_a_verified_proof(tmp_path, wallet,
         lines[0] == "time_utc,height,txid,kind,amount_btc,fee_btc,net_btc,rate,amount_fiat,fee_fiat,net_fiat,ours_in,ours_out,others_out"
         and len(lines) == 3
     )
-    assert "send,-0.21000000,0.01000000,1000000,-210000.00,10000.00" in lines[1]
+    assert "send,-0.20000000,0.01000000,-0.21000000,1000000,-200000.00,10000.00,-210000.00" in lines[1]
 
     # coverage prefers a verified proof with the latest stamp; the ledger can be given as its bundles too
     bundles = load_ledger(node, [ledger / "snapshot-1", ledger / "snapshot-2"])
