@@ -38,6 +38,7 @@
   h2 { color: var(--strong); border-bottom: 1px solid {{ red }}; }
   {% endif %}
   h3 { font-size: 10pt; margin: 14px 0 4px; color: var(--strong); break-after: avoid; }
+  h3.notes { margin-top: 30px; }
   p { margin: 4px 0 8px; }
   strong { color: var(--strong); }
   .eyebrow { font-size: 8pt; letter-spacing: 0.12em; text-transform: uppercase; color: {{ t.tab or "var(--muted)" }}; margin: 0 0 6px; font-weight: 600; }
@@ -180,7 +181,7 @@
   </tbody>
 </table>
 <p class="small muted">Received {{ r.totals.received_btc }} · paid out {{ r.totals.sent_btc }} · fees {{ r.totals.fees_btc }}{% if r.reconciliation.ok %} · difference to the holdings on the chain {{ r.reconciliation.diff_sat | btc }}{% endif %}.{% if r.fiat %} {{ r.fiat.currency }} at the rate in force on the transaction's day.{% endif %}</p>
-{% else %}<p class="muted">No transactions in the period: the closing balance, {{ r.closing.total_btc }}, equals the opening balance{% if not r.reconciliation.ok %} <span class="bad">but the holdings on the chain differ by {{ r.reconciliation.diff_sat | btc | acct }}</span>{% endif %}.</p>{% endif %}
+{% else %}<p class="small muted">No transactions in the period: the closing balance, {{ r.closing.total_btc }}, equals the opening balance{% if not r.reconciliation.ok %} <span class="bad">but the holdings on the chain differ by {{ r.reconciliation.diff_sat | btc | acct }}</span>{% endif %}.</p>{% endif %}
 </div>
 
 <div class="keep">
@@ -197,7 +198,7 @@
   <tr class="total"><td colspan="2">Closing balance</td><td class="num">{{ r.closing.total_btc }}</td></tr>
   </tbody>
 </table>
-{% if r.closing.coins %}<p class="small muted">One page per UTXO follows: the proof of control of its scriptPubKey, then the chain's record of the UTXO at the block of the proof.</p>{% elif r.dust.count %}<p class="muted">Nothing but dust at the end of the period (see the notes): nothing to prove.</p>{% else %}<p class="muted">No holdings at the end of the period: nothing to prove.</p>{% endif %}
+{% if r.closing.coins %}<p class="small muted">One page per UTXO follows: the proof of control of its scriptPubKey, then the chain's record of the UTXO at the block of the proof.</p>{% elif r.dust.count %}<p class="small muted">Nothing but dust at the end of the period (see the notes): nothing to prove.</p>{% else %}<p class="small muted">No holdings at the end of the period: nothing to prove.</p>{% endif %}
 {% if r.coverage.uncovered %}
 <p class="bad">UTXOs without a verified proof hold {{ r.coverage.uncovered_btc }}.</p>
 {% endif %}
@@ -384,7 +385,7 @@
 </div>
 
 {% endif %}
-<h3>Notes</h3>
+<h3 class="notes">Notes</h3>
 <div class="small runin muted">
   <p>Amounts in BTC to eight decimals, negatives in parentheses{% if r.fiat %}; {{ r.fiat.currency }} from {{ r.fiat.source }} at the rate on each transaction's day{% endif %}. Net is received less spent, fees included.{% if r.dust.count %} Outputs of at most {{ r.dust.threshold_sat }} sat are dust and left out of every figure, as if they had never been the wallet's: {{ r.dust.count }} such outputs, {{ r.dust.total_btc }} in all, sit at the wallet's addresses at the closing block ({{ r.name | default("report") }}.json lists them). Spending them would cost more in fees than they hold, so they are left where they are; what is proven is control, not its absence.{% endif %}</p>
   <p>Wallet {{ r.label }}{% if r.policy == "1 of 1" %}, single key{% elif r.policy %}, {{ r.policy }} keys{% endif %}, {{ r.chain }} chain; opening figures at block {{ r.period.start.height }}, closing at block {{ r.period.end.height }}{% if r.period.to_tip %}, the tip when prepared{% endif %}. Holdings and movements as known to the holder's node; no descriptor or extended public key is disclosed.</p>

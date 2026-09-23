@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.8.2 (2026-09-23)
+
+- CI: two step names held a colon, which is not valid YAML; the workflow
+  now parses, checks out core and audit at the pinned tags, and the pin
+  test checks those tags too. Requires bip322-audit 0.10.5.
+- The lines that stand in for an empty movements table or empty holdings
+  are set like the other footnotes; the notes have room above them when
+  they follow section 2 on the same page.
+
 ## 0.8.1 (2026-09-23)
 
 - Dust is left out of every figure rather than counted and excused:
