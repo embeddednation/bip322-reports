@@ -127,6 +127,8 @@ def test_report_backs_every_closing_coin_with_a_verified_proof(tmp_path, wallet,
     report = build_report(history, period, label="Treasury", ledger_roots=[ledger], cli=node, rates=Rates.constant_rate("SEK", "1000000"))
     cov = report["coverage"]
     assert cov["complete"] and cov["covered_sat"] == 63_900_000 and report["ok"]
+    sends = [x for x in report["transactions"] if x["kind"] == "send"]
+    assert all(x["amount_sat"] == x["net_sat"] + x["fee_sat"] for x in sends)  # amount = what the receivers got, (sent); fee beside it
     # dust: outputs at or below the threshold are left out of every figure, as if never the wallet's
     dusty = build_report(history, period, label="Treasury", ledger_roots=[ledger], cli=node, dust_sat=1000)
     assert dusty["dust"]["count"] == 0 and dusty["coverage"] == report["coverage"] and dusty["closing"]["total_sat"] == 63_900_000
@@ -171,7 +173,10 @@ def test_report_backs_every_closing_coin_with_a_verified_proof(tmp_path, wallet,
     csv_path = tmp_path / "t.csv"
     write_csv(report, csv_path)
     lines = csv_path.read_text().splitlines()
-    assert lines[0] == "time_utc,height,txid,kind,net_btc,fee_btc,rate,net_fiat,fee_fiat,ours_in,ours_out,others_out" and len(lines) == 3
+    assert (
+        lines[0] == "time_utc,height,txid,kind,amount_btc,fee_btc,net_btc,rate,amount_fiat,fee_fiat,net_fiat,ours_in,ours_out,others_out"
+        and len(lines) == 3
+    )
     assert "send,-0.21000000,0.01000000,1000000,-210000.00,10000.00" in lines[1]
 
     # coverage prefers a verified proof with the latest stamp; the ledger can be given as its bundles too

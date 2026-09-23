@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.8.3 (2026-09-23)
+
+- The movements table shows Amount, Fee and Balance instead of Net, Fee
+  and Balance: Amount is what moved between the wallet and others before
+  the fee, received or (sent), so a payment can be matched to the
+  receiver's records by its figure; the fee stands beside it in
+  parentheses, and the balance moves by both. Internal moves show only
+  their fee. The JSON rows and the CSV carry `amount` next to `net`; a
+  fiat column values the amount.
+
 ## 0.8.2 (2026-09-23)
 
 - CI: two step names held a colon, which is not valid YAML; the workflow

@@ -165,16 +165,16 @@
 {% if r.transactions %}
 <table>
   <colgroup><col class="w-date"><col><col class="w-kind"><col class="w-num"><col class="w-num"><col class="w-num">{% if r.fiat %}<col class="w-num">{% endif %}</colgroup>
-  <thead><tr><th>Date (UTC)</th><th>Transaction</th><th>Kind</th><th class="num">Net</th><th class="num">Fee</th><th class="num">Balance</th>{% if r.fiat %}<th class="num">Net {{ r.fiat.currency }}</th>{% endif %}</tr></thead>
+  <thead><tr><th>Date (UTC)</th><th>Transaction</th><th>Kind</th><th class="num">Amount</th><th class="num">Fee</th><th class="num">Balance</th>{% if r.fiat %}<th class="num">Amount {{ r.fiat.currency }}</th>{% endif %}</tr></thead>
   <tbody>
   <tr class="open"><td colspan="5">Opening balance, {{ r.period.start.time_utc | utc }}</td><td class="num">{{ r.opening.total_btc }}</td>{% if r.fiat %}<td></td>{% endif %}</tr>
   {% for t in r.transactions %}
   <tr><td>{{ t.time_utc[:10] }}<br><span class="muted">{{ t.time_utc[11:19] }}</span></td>
       <td>{{ tx(t.txid) }}</td>
-      <td>{{ t.kind }}</td><td class="num">{{ t.net_btc | acct }}</td><td class="num">{{ t.fee_btc or "" }}</td><td class="num">{{ t.balance_after_btc }}</td>
-    {% if r.fiat %}<td class="num">{{ (t.fiat.net | acct) if t.fiat.net else "" }}</td>{% endif %}</tr>
+      <td>{{ t.kind }}</td><td class="num">{% if t.amount_sat %}{{ t.amount_btc | acct }}{% endif %}</td><td class="num">{% if t.fee_btc %}({{ t.fee_btc }}){% endif %}</td><td class="num">{{ t.balance_after_btc }}</td>
+    {% if r.fiat %}<td class="num">{{ (t.fiat.amount | acct) if t.fiat.amount and t.amount_sat else "" }}</td>{% endif %}</tr>
   {% endfor %}
-  <tr class="total"><td colspan="3">Closing balance, {{ r.period.end.time_utc | utc }} · the holdings of section 2</td><td class="num">{{ r.totals.net_btc | acct }}</td><td class="num">{{ r.totals.fees_btc }}</td><td class="num">{{ r.closing.total_btc }}</td>{% if r.fiat %}<td></td>{% endif %}</tr>
+  <tr class="total"><td colspan="3">Closing balance, {{ r.period.end.time_utc | utc }} · the holdings of section 2</td><td class="num">{{ (r.totals.received_sat - r.totals.sent_sat) | btc | acct }}</td><td class="num">({{ r.totals.fees_btc }})</td><td class="num">{{ r.closing.total_btc }}</td>{% if r.fiat %}<td></td>{% endif %}</tr>
   {% if not r.reconciliation.ok %}
   <tr><td colspan="5" class="bad">Difference between the running balance and the holdings on the chain</td><td class="num bad">{{ r.reconciliation.diff_sat | btc | acct }}</td>{% if r.fiat %}<td></td>{% endif %}</tr>
   {% endif %}
@@ -387,7 +387,7 @@
 {% endif %}
 <h3 class="notes">Notes</h3>
 <div class="small runin muted">
-  <p>Amounts in BTC to eight decimals, negatives in parentheses{% if r.fiat %}; {{ r.fiat.currency }} from {{ r.fiat.source }} at the rate on each transaction's day{% endif %}. Net is received less spent, fees included.{% if r.dust.count %} Outputs of at most {{ r.dust.threshold_sat }} sat are dust and left out of every figure, as if they had never been the wallet's: {{ r.dust.count }} such outputs, {{ r.dust.total_btc }} in all, sit at the wallet's addresses at the closing block ({{ r.name | default("report") }}.json lists them). Spending them would cost more in fees than they hold, so they are left where they are; what is proven is control, not its absence.{% endif %}</p>
+  <p>Amounts in BTC to eight decimals, negatives in parentheses{% if r.fiat %}; {{ r.fiat.currency }} from {{ r.fiat.source }} at the rate on each transaction's day{% endif %}. Amount is what moved between the wallet and others, received or (sent), before the fee; the balance moves by the amount and the fee together.{% if r.dust.count %} Outputs of at most {{ r.dust.threshold_sat }} sat are dust and left out of every figure, as if they had never been the wallet's: {{ r.dust.count }} such outputs, {{ r.dust.total_btc }} in all, sit at the wallet's addresses at the closing block ({{ r.name | default("report") }}.json lists them). Spending them would cost more in fees than they hold, so they are left where they are; what is proven is control, not its absence.{% endif %}</p>
   <p>Wallet {{ r.label }}{% if r.policy == "1 of 1" %}, single key{% elif r.policy %}, {{ r.policy }} keys{% endif %}, {{ r.chain }} chain; opening figures at block {{ r.period.start.height }}, closing at block {{ r.period.end.height }}{% if r.period.to_tip %}, the tip when prepared{% endif %}. Holdings and movements as known to the holder's node; no descriptor or extended public key is disclosed.</p>
   <p>Prepared {{ r.generated_utc | utc }} by {{ r.tool }}; reference {{ r.report_id }}. With this statement: <code>{{ r.name | default("report") }}.json</code>, <code>{{ r.name | default("report") }}.csv</code>{% if r.bundles %} and the proofs, {% for b in r.bundles %}<code>ledger/{{ b.bundle }}</code>{% if not loop.last %}, {% endif %}{% endfor %}{% endif %}; <code>bip322-audit verify FILE</code> checks a proofs file against a node{% if r.closing.coins %}, and the commands on the UTXO pages paste as they stand{% endif %}. <code>pip install bip322-reports</code>.</p>
 </div>

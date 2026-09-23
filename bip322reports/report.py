@@ -111,12 +111,16 @@ def build_report(
         running += tx.net_sat
         row["balance_after_sat"] = running
         row["balance_after_btc"] = btc(running)
+        amount = tx.net_sat + (tx.fee_sat or 0)  # what moved between the wallet and others, before the fee: received, or (sent)
+        row["amount_sat"] = amount
+        row["amount_btc"] = btc(amount)
         if tx.kind == "receive":
             row["others_out"] = []  # a payer's own change is not the wallet's business
         if rates:
             row["fiat"] = {
                 "currency": rates.currency,
                 "rate": str(rates.rate_on(tx.time)) if rates.rate_on(tx.time) is not None else None,
+                "amount": rates.value(amount, tx.time),
                 "net": rates.value(tx.net_sat, tx.time),
                 "fee": rates.value(tx.fee_sat, tx.time) if tx.fee_sat is not None else None,
             }

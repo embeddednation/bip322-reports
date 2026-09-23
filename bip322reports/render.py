@@ -299,17 +299,24 @@ def copy_fonts(directory: Path) -> Path:
 def write_csv(report: dict, path: Path) -> None:
     fiat = report.get("fiat")
     fields = (
-        ["time_utc", "height", "txid", "kind", "net_btc", "fee_btc"]
-        + (["rate", "net_fiat", "fee_fiat"] if fiat else [])
+        ["time_utc", "height", "txid", "kind", "amount_btc", "fee_btc", "net_btc"]
+        + (["rate", "amount_fiat", "fee_fiat", "net_fiat"] if fiat else [])
         + ["ours_in", "ours_out", "others_out"]
     )
     with Path(path).open("w", newline="") as fh:
         w = csv.DictWriter(fh, fieldnames=fields)
         w.writeheader()
         for tx in report["transactions"]:
-            row = {k: tx.get(k) for k in ("time_utc", "height", "txid", "kind", "net_btc", "fee_btc")}
+            row = {k: tx.get(k) for k in ("time_utc", "height", "txid", "kind", "amount_btc", "fee_btc", "net_btc")}
             if fiat:
-                row.update({"rate": tx["fiat"]["rate"], "net_fiat": tx["fiat"]["net"], "fee_fiat": tx["fiat"]["fee"]})
+                row.update(
+                    {
+                        "rate": tx["fiat"]["rate"],
+                        "amount_fiat": tx["fiat"]["amount"],
+                        "fee_fiat": tx["fiat"]["fee"],
+                        "net_fiat": tx["fiat"]["net"],
+                    }
+                )
             for key in ("ours_in", "ours_out", "others_out"):
                 row[key] = " ".join(f"{c['address']}={c['amount_btc']}" for c in tx[key])
             w.writerow(row)
