@@ -98,7 +98,7 @@ bip322-reports [--cli CMD]           block WHEN
 bip322-reports [--cli CMD] [-w NAME] balance [--at WHEN | --height H] [--history FILE]
 bip322-reports [--cli CMD] [-w NAME] report (--year Y | --from WHEN --to WHEN | --from-height H --to-height H)
                                             [--ledger DIR]... [--holder NAME] [--history FILE]
-                                            [--rates CSV | --rate N] [--currency CODE] [--explorer URL] [--pdf] [--theme light|paper|dark|economist] [--heading STYLE] [-o DIR]
+                                            [--rates CSV | --rate N] [--currency CODE] [--dust SATS] [--explorer URL] [--pdf] [--theme economist|light|paper|dark] [--heading STYLE] [-o DIR]
 bip322-reports help [COMMAND]
 ```
 
@@ -162,6 +162,12 @@ The wallet is named by the node wallet's name; `--holder NAME` puts the holder's
   bytes themselves. A coin that arrived after its proof (a change address
   proven before the spend) is marked so; the year-end bundle gives it a
   proof dated after it.
+* `--dust SATS`: closing outputs of at most SATS satoshi are dust. They are
+  counted in the balance and listed in grey under the holdings with a
+  subtotal, but they need no proof and get no page: spending them would
+  cost more in fees than they hold, so a holder leaves them (and spending
+  unsolicited dust links addresses). The checks apply to the outputs above
+  dust; the notes state the rule.
 * Exceptions only: when every check passes (proofs valid, stamped after
   the period, UTXOs found on the chain, node cross-check, reconciliation)
   nothing says so beyond the figures; when one fails, an ATTENTION mark

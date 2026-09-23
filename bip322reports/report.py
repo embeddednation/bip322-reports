@@ -39,19 +39,26 @@ def build_report(
     engines=None,
     progress=None,
     onchain: bool = True,
+    dust_sat: int = 0,
 ) -> dict:
     """The report as a plain dict (what report.json holds and the templates render).
 
     ``cli`` is needed to re-verify the ledger's proofs against the chain and to
     cross-check the closing balance with ``listunspent`` when the period runs
     to the tip; without it the proofs are verified for their signatures only.
+    Closing outputs of at most ``dust_sat`` satoshi are dust: counted in the
+    balance and listed, but not required to have a proof and given no page;
+    spending them would cost more than they hold, so a holder leaves them.
     """
     opening = history.coins_at(period.start.height)
-    closing = history.coins_at(period.end.height)
+    closing_all = history.coins_at(period.end.height)
+    dust = [c for c in closing_all if dust_sat and c.amount_sat <= dust_sat]
+    closing = [c for c in closing_all if c not in dust]
     created = {tx.txid: tx.iso_time for tx in history.txs}  # when each coin was received: the time of its creating transaction's block
     movements = history.between(period.start.height, period.end.height)
     opening_sat = sum(c.amount_sat for c in opening)
-    closing_sat = sum(c.amount_sat for c in closing)
+    closing_sat = sum(c.amount_sat for c in closing_all)
+    dust_sat_total = sum(c.amount_sat for c in dust)
     net_sat = sum(tx.net_sat for tx in movements)
 
     bundles = load_ledger(cli, ledger_roots, engines=engines, progress=progress) if ledger_roots else []
@@ -160,11 +167,18 @@ def build_report(
             "diff_sat": closing_sat - opening_sat - net_sat,
             "ok": closing_sat == opening_sat + net_sat,
         },
+        "dust": {
+            "threshold_sat": dust_sat,
+            "count": len(dust),
+            "total_sat": dust_sat_total,
+            "total_btc": btc(dust_sat_total),
+            "coins": [{**c.to_dict(), "created_utc": created.get(c.txid), "script_pubkey": _script_of(c.address)} for c in dust],
+        },
         "coverage": {
             "covered_sat": covered_sat,
             "covered_btc": btc(covered_sat),
-            "uncovered_sat": closing_sat - covered_sat,
-            "uncovered_btc": btc(closing_sat - covered_sat),
+            "uncovered_sat": closing_sat - dust_sat_total - covered_sat,
+            "uncovered_btc": btc(closing_sat - dust_sat_total - covered_sat),
             "covered_count": len(closing_rows) - len(uncovered),
             "covered_after_period_count": after_period,
             "addresses_total": len(closing_addresses),
@@ -184,7 +198,7 @@ def build_report(
         "pending_transactions": [tx.to_dict() for tx in history.pending],
         "onchain": onchain_result,
         "fiat": rates.to_dict() if rates else None,
-        "node_check": _node_check(cli, history, period, closing) if cli is not None else None,
+        "node_check": _node_check(cli, history, period, closing_all) if cli is not None else None,
     }
     report["report_id"] = _report_id(report)
     node_ok = report["node_check"] is None or report["node_check"].get("ok") is not False  # None: could not be checked, not a failure
@@ -264,6 +278,14 @@ def shell_command(argv: list[str]) -> str:
     body[0] = '"' + body[0]
     body[-1] = body[-1] + '"'
     return "\n".join(lines + body)
+
+
+def _script_of(address: str) -> str | None:
+    """The scriptPubKey an address encodes, as hex; None when the address cannot be decoded."""
+    try:
+        return describe_address(address)["scriptPubKey"]
+    except (BIP322Error, ValueError):
+        return None
 
 
 def _address_step(address: str) -> dict:
@@ -440,6 +462,9 @@ def format_summary(report: dict) -> str:
         f"stamped after the period's end: {c['covered_after_period_count']}/{c['total_count']}"
         + ("" if c["complete"] else f"; UNCOVERED {c['uncovered_btc']} BTC"),
     ]
+    d = report.get("dust") or {}
+    if d.get("count"):
+        lines.append(f"dust: {d['count']} outputs of at most {d['threshold_sat']} sat, {d['total_btc']} BTC, counted but not proven")
     for b in report["bundles"]:
         lines.append(
             f"  bundle {b['bundle']}: stamp {b['stamp']['height']}, signatures {b['signatures']}, {'verified' if b['verified'] else 'NOT VERIFIED'}, used for {b['used_for']}"

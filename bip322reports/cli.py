@@ -141,6 +141,7 @@ def cmd_report(args) -> int:
         rates=rates,
         engines=args.engines.split(",") if args.engines else None,
         progress=_progress,
+        dust_sat=args.dust,
     )
     directory = Path(args.output) if args.output else Path(f"{label}-{period.label}".replace(" ", "_").replace("/", "_"))
     if directory.exists() and any(directory.iterdir()) and not args.force:
@@ -247,6 +248,13 @@ def build_parser() -> argparse.ArgumentParser:
         "--ledger", "-l", metavar="DIR", action="append", help="directory tree of bip322-audit bundles (proofs.json); may repeat"
     )
     p.add_argument("--holder", metavar="NAME", help="the holder of the wallet, as named in the statement's header (optional)")
+    p.add_argument(
+        "--dust",
+        metavar="SATS",
+        type=int,
+        default=0,
+        help="closing outputs of at most SATS satoshi are dust: counted in the balance and listed, but not required to have a proof (default: none)",
+    )
     p.add_argument("--history", metavar="FILE", help="use this history.json instead of reading the node wallet")
     p.add_argument("--rates", metavar="CSV", help="date,rate rows (rate per BTC) for a fiat valuation of the movements")
     p.add_argument("--rate", metavar="RATE", help="a constant rate per BTC instead of --rates")

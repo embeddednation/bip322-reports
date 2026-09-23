@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "bip322-reports"
-version = "0.7.12"
+version = "0.8.0"
 description = "Balance reports in which every coin is backed by a verified BIP-322 proof of control: periods, movements, reconciliation, HTML/CSV/PDF, on top of bip322-audit"
 requires-python = ">=3.10"
 license = "MIT"

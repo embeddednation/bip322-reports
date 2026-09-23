@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.8.0 (2026-09-23)
+
+- `report --dust SATS` (`build_report(dust_sat=)`): closing outputs of at
+  most SATS satoshi are dust, counted in the balance and listed in grey with
+  a subtotal, but neither required to have a proof nor given a page. The
+  coverage and on-chain checks cover the outputs above dust; the node
+  cross-check and the reconciliation still cover everything. The JSON has
+  a `dust` block, the summary a dust line, the notes the rule.
+
 ## 0.7.12 (2026-09-23)
 
 - The movements table no longer lists the payee under a send (the CSV and
