@@ -50,7 +50,7 @@
   .pill.ok { background: var(--ok); color: var(--on-pill); } .pill.bad { background: var(--bad); color: var(--on-pill); }
   .period { font-family: var(--font-label); font-size: 9.5pt; color: var(--muted); margin: 2px 0 18px; }
   .period .when { color: var(--strong); font-weight: 600; font-variant-numeric: tabular-nums; }
-  svg.fig { width: 100%; height: auto; margin: 2px 0 2px; }
+  svg.fig { width: 100%; height: auto; margin: 6px 0 2px; }
   .caption { font-size: 8pt; color: var(--muted); margin: 0 0 10px; }
   .tiles { display: table; width: 100%; table-layout: fixed; border-spacing: 8px 0; margin: 4px -8px 6px; }
   .tile { display: table-cell; background: var(--tile); border-radius: 6px; padding: 10px 12px; vertical-align: top; }
@@ -196,7 +196,7 @@
   <tr class="total"><td colspan="2">Closing balance</td><td class="num">{{ r.closing.total_btc }}</td></tr>
   </tbody>
 </table>
-<p class="small muted">One page per UTXO follows: the proof of control of its scriptPubKey, then the chain's record of the UTXO at the block of the proof.</p>
+{% if r.closing.coins %}<p class="small muted">One page per UTXO follows: the proof of control of its scriptPubKey, then the chain's record of the UTXO at the block of the proof.</p>{% else %}<p class="muted">No holdings at the end of the period: nothing to prove.</p>{% endif %}
 {% if r.coverage.uncovered %}
 <p class="bad">UTXOs without a verified proof hold {{ r.coverage.uncovered_btc }}.</p>
 {% endif %}

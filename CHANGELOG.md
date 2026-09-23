@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.7.10 (2026-09-23)
+
+- The figure's distance from its heading matches the tables'.
+- A period that ends with no holdings says so under section 2 instead of
+  announcing UTXO pages that do not follow. Checked end to end on regtest
+  with a P2WPKH wallet, and with a period in which the wallet held nothing.
+
 ## 0.7.9 (2026-09-23)
 
 - The figure starts right under its heading (its empty top band is gone);
