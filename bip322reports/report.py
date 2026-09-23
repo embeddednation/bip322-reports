@@ -10,7 +10,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 from bip322audit.holdings import format_holdings, holdings, holdings_command
-from bip322audit.rpc import BitcoinCli, RpcError, btc
+from bip322audit.rpc import BitcoinCli, RpcError, btc, to_sat
 from bip322core.cli import format_address_text, format_verify_text
 from bip322core.core import BIP322Error
 from bip322core.engines import EngineError, available_engines
@@ -46,18 +46,20 @@ def build_report(
     ``cli`` is needed to re-verify the ledger's proofs against the chain and to
     cross-check the closing balance with ``listunspent`` when the period runs
     to the tip; without it the proofs are verified for their signatures only.
-    Closing outputs of at most ``dust_sat`` satoshi are dust: counted in the
-    balance and listed, but not required to have a proof and given no page;
-    spending them would cost more than they hold, so a holder leaves them.
+    Outputs of at most ``dust_sat`` satoshi are dust and left out of every
+    figure, as if they had never been the wallet's (``History.without_dust``);
+    those held at the closing block are listed in the report's ``dust`` block
+    for the record.  Spending them would cost more than they hold, so a
+    holder leaves them; and it is control that is proven, not its absence.
     """
+    dust = [c for c in history.coins_at(period.end.height) if dust_sat and c.amount_sat <= dust_sat]
+    history = history.without_dust(dust_sat)
     opening = history.coins_at(period.start.height)
-    closing_all = history.coins_at(period.end.height)
-    dust = [c for c in closing_all if dust_sat and c.amount_sat <= dust_sat]
-    closing = [c for c in closing_all if c not in dust]
+    closing = history.coins_at(period.end.height)
     created = {tx.txid: tx.iso_time for tx in history.txs}  # when each coin was received: the time of its creating transaction's block
     movements = history.between(period.start.height, period.end.height)
     opening_sat = sum(c.amount_sat for c in opening)
-    closing_sat = sum(c.amount_sat for c in closing_all)
+    closing_sat = sum(c.amount_sat for c in closing)
     dust_sat_total = sum(c.amount_sat for c in dust)
     net_sat = sum(tx.net_sat for tx in movements)
 
@@ -177,8 +179,8 @@ def build_report(
         "coverage": {
             "covered_sat": covered_sat,
             "covered_btc": btc(covered_sat),
-            "uncovered_sat": closing_sat - dust_sat_total - covered_sat,
-            "uncovered_btc": btc(closing_sat - dust_sat_total - covered_sat),
+            "uncovered_sat": closing_sat - covered_sat,
+            "uncovered_btc": btc(closing_sat - covered_sat),
             "covered_count": len(closing_rows) - len(uncovered),
             "covered_after_period_count": after_period,
             "addresses_total": len(closing_addresses),
@@ -198,7 +200,7 @@ def build_report(
         "pending_transactions": [tx.to_dict() for tx in history.pending],
         "onchain": onchain_result,
         "fiat": rates.to_dict() if rates else None,
-        "node_check": _node_check(cli, history, period, closing_all) if cli is not None else None,
+        "node_check": _node_check(cli, history, period, closing, dust_sat) if cli is not None else None,
     }
     report["report_id"] = _report_id(report)
     node_ok = report["node_check"] is None or report["node_check"].get("ok") is not False  # None: could not be checked, not a failure
@@ -429,15 +431,15 @@ def _relative_dir(path, roots) -> str:
     return Path(path).name
 
 
-def _node_check(cli: BitcoinCli, history: History, period: Period, closing: list[Coin]) -> dict | None:
-    """When the period ends at the history's tip, the node's listunspent must agree with the closing coins."""
+def _node_check(cli: BitcoinCli, history: History, period: Period, closing: list[Coin], dust_sat: int = 0) -> dict | None:
+    """When the period ends at the history's tip, the node's listunspent must agree with the closing coins (dust left out on both sides)."""
     if period.end.height != history.tip_height:
         return None
     try:
         rows = cli.call("listunspent", 1, 9999999) or []
     except RpcError as exc:
         return {"ok": None, "error": str(exc)}
-    node = {(r["txid"], int(r["vout"])) for r in rows if int(r.get("confirmations", 0)) > 0}
+    node = {(r["txid"], int(r["vout"])) for r in rows if int(r.get("confirmations", 0)) > 0 and to_sat(r["amount"]) > dust_sat}
     ours = {c.outpoint for c in closing}
     return {
         "ok": node == ours,
@@ -464,7 +466,7 @@ def format_summary(report: dict) -> str:
     ]
     d = report.get("dust") or {}
     if d.get("count"):
-        lines.append(f"dust: {d['count']} outputs of at most {d['threshold_sat']} sat, {d['total_btc']} BTC, counted but not proven")
+        lines.append(f"dust: {d['count']} outputs of at most {d['threshold_sat']} sat, {d['total_btc']} BTC, left out of every figure")
     for b in report["bundles"]:
         lines.append(
             f"  bundle {b['bundle']}: stamp {b['stamp']['height']}, signatures {b['signatures']}, {'verified' if b['verified'] else 'NOT VERIFIED'}, used for {b['used_for']}"

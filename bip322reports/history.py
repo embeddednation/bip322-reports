@@ -134,6 +134,33 @@ class History:
         """Confirmed transactions with ``start_height < height <= end_height``."""
         return [tx for tx in self.txs if tx.height is not None and start_height < tx.height <= end_height]
 
+    def without_dust(self, threshold_sat: int) -> History:
+        """This history as if outputs of at most ``threshold_sat`` had never been the wallet's.
+
+        Such outputs are dropped from every transaction, received or spent, so
+        balances, movements and the reconciliation are all computed without
+        them; a transaction that touched nothing else disappears.  With a
+        threshold of 0 the history is returned unchanged.
+        """
+        if threshold_sat <= 0:
+            return self
+
+        def keep(tx: WalletTx) -> WalletTx:
+            return WalletTx(
+                tx.txid,
+                tx.height,
+                tx.blockhash,
+                tx.time,
+                [c for c in tx.ours_in if c.amount_sat > threshold_sat],
+                [c for c in tx.ours_out if c.amount_sat > threshold_sat],
+                tx.others_out,
+                tx.fee_sat,
+            )
+
+        txs = [t for t in (keep(tx) for tx in self.txs) if t.ours_in or t.ours_out]
+        pending = [t for t in (keep(tx) for tx in self.pending) if t.ours_in or t.ours_out]
+        return History(self.chain, self.wallet, self.tip_height, self.tip_hash, self.fetched_utc, txs, pending)
+
     def spender_of(self, outpoint: Outpoint) -> WalletTx | None:
         for tx in self.txs:
             if any(c.outpoint == outpoint for c in tx.ours_in):

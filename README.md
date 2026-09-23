@@ -162,12 +162,14 @@ The wallet is named by the node wallet's name; `--holder NAME` puts the holder's
   bytes themselves. A coin that arrived after its proof (a change address
   proven before the spend) is marked so; the year-end bundle gives it a
   proof dated after it.
-* `--dust SATS`: closing outputs of at most SATS satoshi are dust. They are
-  counted in the balance and listed in grey under the holdings with a
-  subtotal, but they need no proof and get no page: spending them would
-  cost more in fees than they hold, so a holder leaves them (and spending
-  unsolicited dust links addresses). The checks apply to the outputs above
-  dust; the notes state the rule.
+* `--dust SATS`: outputs of at most SATS satoshi are dust and left out of
+  every figure, as if they had never been the wallet's: balances,
+  movements, reconciliation, coverage and the node cross-check all ignore
+  them, so the statement agrees with books that never recorded them. The
+  dust held at the closing block is listed in the JSON and counted in a
+  note at the end; spending it would cost more in fees than it holds, so
+  a holder leaves it (and spending unsolicited dust links addresses). What
+  is proven is control, not its absence.
 * Exceptions only: when every check passes (proofs valid, stamped after
   the period, UTXOs found on the chain, node cross-check, reconciliation)
   nothing says so beyond the figures; when one fails, an ATTENTION mark

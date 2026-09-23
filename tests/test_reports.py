@@ -127,22 +127,23 @@ def test_report_backs_every_closing_coin_with_a_verified_proof(tmp_path, wallet,
     report = build_report(history, period, label="Treasury", ledger_roots=[ledger], cli=node, rates=Rates.constant_rate("SEK", "1000000"))
     cov = report["coverage"]
     assert cov["complete"] and cov["covered_sat"] == 63_900_000 and report["ok"]
-    # dust: outputs at or below the threshold count in the balance but need no proof
+    # dust: outputs at or below the threshold are left out of every figure, as if never the wallet's
     dusty = build_report(history, period, label="Treasury", ledger_roots=[ledger], cli=node, dust_sat=1000)
-    assert dusty["dust"]["count"] == 0 and dusty["coverage"] == report["coverage"]
+    assert dusty["dust"]["count"] == 0 and dusty["coverage"] == report["coverage"] and dusty["closing"]["total_sat"] == 63_900_000
     dusty = build_report(history, period, label="Treasury", ledger_roots=[ledger], cli=node, dust_sat=63_900_000)
     assert (
         dusty["dust"]["count"] == 3
         and dusty["dust"]["total_sat"] == 63_900_000
-        and dusty["closing"]["total_sat"] == 63_900_000
+        and dusty["closing"]["total_sat"] == 0
         and dusty["coverage"]["total_count"] == 0
         and dusty["coverage"]["complete"]
         and dusty["reconciliation"]["ok"]
+        and dusty["node_check"]["ok"]
         and dusty["ok"]
         and "dust: 3 outputs" in format_summary(dusty)
     )
     html = render_html(dusty)
-    assert "of which dust" in html and "Nothing but dust" in html and "How a proof" not in html
+    assert "Nothing but dust" in html and "left out of every figure" in html and "How a proof" not in html
     by_out = {(c["txid"][:2], c["vout"]): c["proof"] for c in report["closing"]["coins"]}
     assert by_out[("bb", 0)]["message"].startswith("Owner proof") and by_out[("bb", 0)]["verified"]
     assert by_out[("dd", 1)]["bundle"].endswith("snapshot-2/proofs.json") and by_out[("dd", 1)]["stamp"]["height"] == 1014

@@ -142,7 +142,7 @@
 </table>
 <table class="checks">
   <colgroup><col><col style="width:56%"><col></colgroup>
-  <tr><td>{{ yesno(r.coverage.complete) }}</td><td>Proof of control for every closing UTXO{% if r.dust.count %} above dust{% endif %} (section 3)</td>
+  <tr><td>{{ yesno(r.coverage.complete) }}</td><td>Proof of control for every closing UTXO (section 3)</td>
       <td class="num">{{ r.coverage.addresses_covered }} of {{ r.coverage.addresses_total }} scripts{% if not r.coverage.complete %} · {{ r.coverage.uncovered_btc }} without proof{% endif %}</td></tr>
   <tr><td>{% if r.period.to_tip %}<span class="muted">–</span>{% else %}{{ yesno(r.coverage.covered_after_period_count == r.coverage.total_count) }}{% endif %}</td>
       <td>Proofs dated after the period's end</td>
@@ -194,18 +194,10 @@
       <td>{{ spk(a.script.script_pubkey, o.txid, "hl-script") }}</td>
       <td class="num hl-amount">{{ o.amount_btc }}</td></tr>
   {% endfor %}{% endfor %}
-  {% for o in r.dust.coins %}
-  <tr class="muted"><td><span class="mono">{{ tx(o.txid) }}:{{ o.vout }}</span></td>
-      <td>{{ spk(o.script_pubkey, o.txid) }}</td>
-      <td class="num">{{ o.amount_btc }}</td></tr>
-  {% endfor %}
-  {% if r.dust.count %}
-  <tr><td colspan="2" class="muted">of which dust, {{ r.dust.count }} outputs of at most {{ r.dust.threshold_sat }} sat, counted but not proven</td><td class="num muted">{{ r.dust.total_btc }}</td></tr>
-  {% endif %}
   <tr class="total"><td colspan="2">Closing balance</td><td class="num">{{ r.closing.total_btc }}</td></tr>
   </tbody>
 </table>
-{% if r.closing.coins %}<p class="small muted">One page per UTXO follows{% if r.dust.count %} for each output above dust{% endif %}: the proof of control of its scriptPubKey, then the chain's record of the UTXO at the block of the proof.</p>{% elif r.dust.count %}<p class="muted">Nothing but dust at the end of the period: nothing to prove.</p>{% else %}<p class="muted">No holdings at the end of the period: nothing to prove.</p>{% endif %}
+{% if r.closing.coins %}<p class="small muted">One page per UTXO follows: the proof of control of its scriptPubKey, then the chain's record of the UTXO at the block of the proof.</p>{% elif r.dust.count %}<p class="muted">Nothing but dust at the end of the period (see the notes): nothing to prove.</p>{% else %}<p class="muted">No holdings at the end of the period: nothing to prove.</p>{% endif %}
 {% if r.coverage.uncovered %}
 <p class="bad">UTXOs without a verified proof hold {{ r.coverage.uncovered_btc }}.</p>
 {% endif %}
@@ -394,7 +386,7 @@
 {% endif %}
 <h3>Notes</h3>
 <div class="small runin muted">
-  <p>Amounts in BTC to eight decimals, negatives in parentheses{% if r.fiat %}; {{ r.fiat.currency }} from {{ r.fiat.source }} at the rate on each transaction's day{% endif %}. Net is received less spent, fees included.{% if r.dust.count %} Outputs of at most {{ r.dust.threshold_sat }} sat are dust, {{ r.dust.count }} of them holding {{ r.dust.total_btc }}: counted in the balance, not proven; spending them would cost more in fees than they hold, so they are left where they are.{% endif %}</p>
+  <p>Amounts in BTC to eight decimals, negatives in parentheses{% if r.fiat %}; {{ r.fiat.currency }} from {{ r.fiat.source }} at the rate on each transaction's day{% endif %}. Net is received less spent, fees included.{% if r.dust.count %} Outputs of at most {{ r.dust.threshold_sat }} sat are dust and left out of every figure, as if they had never been the wallet's: {{ r.dust.count }} such outputs, {{ r.dust.total_btc }} in all, sit at the wallet's addresses at the closing block ({{ r.name | default("report") }}.json lists them). Spending them would cost more in fees than they hold, so they are left where they are; what is proven is control, not its absence.{% endif %}</p>
   <p>Wallet {{ r.label }}{% if r.policy == "1 of 1" %}, single key{% elif r.policy %}, {{ r.policy }} keys{% endif %}, {{ r.chain }} chain; opening figures at block {{ r.period.start.height }}, closing at block {{ r.period.end.height }}{% if r.period.to_tip %}, the tip when prepared{% endif %}. Holdings and movements as known to the holder's node; no descriptor or extended public key is disclosed.</p>
   <p>Prepared {{ r.generated_utc | utc }} by {{ r.tool }}; reference {{ r.report_id }}. With this statement: <code>{{ r.name | default("report") }}.json</code>, <code>{{ r.name | default("report") }}.csv</code>{% if r.bundles %} and the proofs, {% for b in r.bundles %}<code>ledger/{{ b.bundle }}</code>{% if not loop.last %}, {% endif %}{% endfor %}{% endif %}; <code>bip322-audit verify FILE</code> checks a proofs file against a node{% if r.closing.coins %}, and the commands on the UTXO pages paste as they stand{% endif %}. <code>pip install bip322-reports</code>.</p>
 </div>

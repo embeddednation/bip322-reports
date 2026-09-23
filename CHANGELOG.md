@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.8.1 (2026-09-23)
+
+- Dust is left out of every figure rather than counted and excused:
+  `History.without_dust` drops outputs at or below the threshold from every
+  transaction, received or spent, so balances, movements, the
+  reconciliation and the node cross-check agree with books that never saw
+  them. The holdings table no longer lists dust; the note at the end and
+  the JSON's `dust` block record what sits at the closing block.
+
 ## 0.8.0 (2026-09-23)
 
 - `report --dust SATS` (`build_report(dust_sat=)`): closing outputs of at
