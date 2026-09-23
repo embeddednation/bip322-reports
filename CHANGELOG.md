@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.7.9 (2026-09-23)
+
+- The figure starts right under its heading (its empty top band is gone);
+  the colour key under section 2 is gone; the notes are three short
+  sentences each: units and net; wallet, chain and blocks, what is and is
+  not disclosed; preparation, reference, the files alongside and how to
+  check them.
+
 ## 0.7.8 (2026-09-23)
 
 - Figure: the message box sits level with the top row, with its hashing

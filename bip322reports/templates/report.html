@@ -50,7 +50,7 @@
   .pill.ok { background: var(--ok); color: var(--on-pill); } .pill.bad { background: var(--bad); color: var(--on-pill); }
   .period { font-family: var(--font-label); font-size: 9.5pt; color: var(--muted); margin: 2px 0 18px; }
   .period .when { color: var(--strong); font-weight: 600; font-variant-numeric: tabular-nums; }
-  svg.fig { width: 100%; height: auto; margin: 6px 0 2px; }
+  svg.fig { width: 100%; height: auto; margin: 2px 0 2px; }
   .caption { font-size: 8pt; color: var(--muted); margin: 0 0 10px; }
   .tiles { display: table; width: 100%; table-layout: fixed; border-spacing: 8px 0; margin: 4px -8px 6px; }
   .tile { display: table-cell; background: var(--tile); border-radius: 6px; padding: 10px 12px; vertical-align: top; }
@@ -196,7 +196,7 @@
   <tr class="total"><td colspan="2">Closing balance</td><td class="num">{{ r.closing.total_btc }}</td></tr>
   </tbody>
 </table>
-<p class="small muted">One page per UTXO follows: the proof of control of its scriptPubKey, then the chain's record of the UTXO at the block of the proof. One thing, one colour: <span class="hl-script">scriptPubKey</span>, <span class="hl-block">block</span>, <span class="hl-proof">proof</span>, <span class="hl-utxo">UTXO</span>, <span class="hl-amount">amount</span>.</p>
+<p class="small muted">One page per UTXO follows: the proof of control of its scriptPubKey, then the chain's record of the UTXO at the block of the proof.</p>
 {% if r.coverage.uncovered %}
 <p class="bad">UTXOs without a verified proof hold {{ r.coverage.uncovered_btc }}.</p>
 {% endif %}
@@ -274,7 +274,7 @@
 <text x="{{ x + 10 }}" y="{{ y + 40 }}" font-weight="600" fill="{{ k }}">input</text>
 <text x="{{ x + 10 }}" y="{{ y + 110 }}" font-weight="600" fill="{{ k }}">output</text>
 {%- endmacro %}
-<svg class="fig" viewBox="0 0 700 514" xmlns="http://www.w3.org/2000/svg" font-family="{{ t.font_label | safe }}" font-size="10">
+<svg class="fig" viewBox="0 49 700 465" xmlns="http://www.w3.org/2000/svg" font-family="{{ t.font_label | safe }}" font-size="10">
   <defs>
     <marker id="arr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="{{ m }}"/></marker>
     <marker id="arrp" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="{{ t.proof }}"/></marker>
@@ -383,9 +383,9 @@
 
 <h3>Notes</h3>
 <div class="small runin muted">
-  <p>Amounts in BTC, exact to eight decimals (1 BTC = 100 000 000 satoshi), negatives in parentheses{% if r.fiat %}; {{ r.fiat.currency }} values from {{ r.fiat.source }}, at the rate in force on each transaction's day{% endif %}. Net is what the wallet received less what it spent, fees included; "internal" moves coins within the wallet and costs only the fee.</p>
-  <p>Wallet {{ r.label }}{% if r.policy %}, addresses controlled by {{ r.policy }} keys{% endif %}, on the {{ r.chain }} chain; opening figures as of block {{ r.period.start.height }}, closing figures as of block {{ r.period.end.height }}{% if r.period.to_tip %}, the chain tip when the statement was prepared{% endif %}. Movements and holdings are those of this wallet as known to the holder's node; that it is the holder's only wallet rests on their representation. No descriptor, extended public key or derivation path is disclosed.</p>
-  <p>Prepared {{ r.generated_utc | utc }} by {{ r.tool }}; reference {{ r.report_id }}, derived from the figures stated. Alongside: <code>{{ r.name | default("report") }}.json</code> with every figure, <code>{{ r.name | default("report") }}.csv</code> with the movements, and the proofs{% if r.bundles %} as {% for b in r.bundles %}<code>ledger/{{ b.bundle }}</code>{% if not loop.last %}, {% endif %}{% endfor %}{% endif %}; <code>bip322-audit verify FILE</code> checks every proof in such a file against a node, <code>bip322-refcheck</code> runs independent implementations beside the verifier, and <code>bip322 audit holdings ADDRESS --at BLOCK</code> scans the UTXO set by address. The commands on the UTXO pages paste as they stand. All install with <code>pip install bip322-reports</code>.</p>
+  <p>Amounts in BTC to eight decimals, negatives in parentheses{% if r.fiat %}; {{ r.fiat.currency }} from {{ r.fiat.source }} at the rate on each transaction's day{% endif %}. Net is received less spent, fees included.</p>
+  <p>Wallet {{ r.label }}{% if r.policy %}, {{ r.policy }} keys{% endif %}, {{ r.chain }} chain; opening figures at block {{ r.period.start.height }}, closing at block {{ r.period.end.height }}{% if r.period.to_tip %}, the tip when prepared{% endif %}. Holdings and movements as known to the holder's node; no descriptor or extended public key is disclosed.</p>
+  <p>Prepared {{ r.generated_utc | utc }} by {{ r.tool }}; reference {{ r.report_id }}. With this statement: <code>{{ r.name | default("report") }}.json</code>, <code>{{ r.name | default("report") }}.csv</code>{% if r.bundles %} and the proofs, {% for b in r.bundles %}<code>ledger/{{ b.bundle }}</code>{% if not loop.last %}, {% endif %}{% endfor %}{% endif %}; <code>bip322-audit verify FILE</code> checks a proofs file against a node, and the commands on the UTXO pages paste as they stand. <code>pip install bip322-reports</code>.</p>
 </div>
 </div>
 </body>
