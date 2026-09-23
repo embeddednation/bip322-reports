@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.7.8 (2026-09-23)
+
+- Figure: the message box sits level with the top row, with its hashing
+  and the hash below it, and an elbow arrow carries the hash into
+  to_spend's scriptSig. Every field's value sits in one tab column within
+  its transaction (prevout, scriptSig or witness, value, scriptPubKey), so
+  the values line up as they do in the commands' output.
+
 ## 0.7.7 (2026-09-23)
 
 - Section 4 says what matters and no more: the three transactions show
