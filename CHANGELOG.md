@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.7.5 (2026-09-23)
+
+- The figure's three transactions share one layout: version, input
+  (prevout, sequence, scriptSig or witness), output (value, scriptPubKey),
+  each field in the same column, so the differences stand out. The dashed
+  line between the two scriptPubKeys is gone; an arrow leads from to_sign
+  into the verifier.
+
 ## 0.7.4 (2026-09-22)
 
 - Section 4's figure draws the chain's transaction in the same form as

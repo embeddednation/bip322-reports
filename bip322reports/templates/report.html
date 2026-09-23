@@ -262,118 +262,123 @@
 {% macro val(x, y, text, role) -%}
 <text x="{{ x }}" y="{{ y }}" font-family="{{ mono }}" font-size="9" font-weight="700" fill="{{ t[role] }}">{{ text }}</text>
 {%- endmacro %}
-{% macro pill(x, y, w, text) -%}
-<rect x="{{ x }}" y="{{ y }}" width="{{ w }}" height="18" rx="9" fill="none" stroke="{{ m }}"/><text x="{{ x + w / 2 }}" y="{{ y + 12.5 }}" text-anchor="middle" font-size="8.5" fill="{{ m }}">{{ text }}</text>
+{% macro pill(x, y, w, text, size=8.5) -%}
+<rect x="{{ x }}" y="{{ y }}" width="{{ w }}" height="18" rx="9" fill="none" stroke="{{ m }}"/><text x="{{ x + w / 2 }}" y="{{ y + 12.5 }}" text-anchor="middle" font-size="{{ size }}" fill="{{ m }}">{{ text }}</text>
 {%- endmacro %}
 {% macro field(x, y, name, value, role=None) -%}
 <text x="{{ x }}" y="{{ y }}" font-family="{{ mono }}" font-size="9" fill="{{ k }}">{{ name }}</text>{% if role %}{{ val(x + (name | length + 1) * 5.4, y, value, role) }}{% else %}<text x="{{ x + (name | length + 1) * 5.4 }}" y="{{ y }}" font-family="{{ mono }}" font-size="9" fill="{{ k }}">{{ value }}</text>{% endif %}
 {%- endmacro %}
-<svg class="fig" viewBox="0 0 700 526" xmlns="http://www.w3.org/2000/svg" font-family="{{ t.font_label | safe }}" font-size="10">
+{% macro txbox(x, y, title, sub) -%}
+<rect x="{{ x }}" y="{{ y }}" width="240" height="188" rx="3" fill="none" stroke="{{ ln }}"/>
+<text x="{{ x + 10 }}" y="{{ y + 18 }}" font-weight="700" fill="{{ st }}">{{ title }} <tspan font-weight="400" fill="{{ m }}">{{ sub }}</tspan></text>
+{%- endmacro %}
+<svg class="fig" viewBox="0 0 700 552" xmlns="http://www.w3.org/2000/svg" font-family="{{ t.font_label | safe }}" font-size="10">
   <defs>
     <marker id="arr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="{{ m }}"/></marker>
     <marker id="arrp" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="{{ t.proof }}"/></marker>
   </defs>
-  <!-- the message, hashed -->
-  <rect x="1" y="30" width="178" height="92" rx="3" fill="none" stroke="{{ ln }}"/>
-  <text x="11" y="48" font-weight="700" fill="{{ st }}">Message</text>
-  <text x="11" y="66" font-family="{{ mono }}" font-size="9" fill="{{ k }}">Proof of control 2026</text>
-  <text x="11" y="80" font-family="{{ mono }}" font-size="9" fill="{{ k }}">block:</text>
-  <text x="49" y="80" font-family="{{ mono }}" font-size="9" fill="{{ t.block }}">{{ r.period.end.height }} 000000…</text>
-  <text x="11" y="98" fill="{{ m }}">any text will do; here a title</text>
-  <text x="11" y="112" fill="{{ m }}">and a block line, dating the proof</text>
-  <line x1="90" y1="123" x2="90" y2="136" stroke="{{ m }}" marker-end="url(#arr)"/>
-  {{ pill(1, 138, 178, "SHA-256, tag BIP0322-signed-message") }}
-  {{ val(39, 176, "<hash of message>", "hash") }}
-  <line x1="142" y1="172" x2="210" y2="172" stroke="{{ m }}" marker-end="url(#arr)"/>
-  <!-- to_spend -->
-  <rect x="212" y="1" width="240" height="204" rx="3" fill="none" stroke="{{ ln }}"/>
-  <text x="222" y="19" font-weight="700" fill="{{ st }}">to_spend <tspan font-weight="400" fill="{{ m }}">a transaction never broadcast</tspan></text>
-  {{ field(222, 37, "version", "0 · locktime 0") }}
-  <text x="222" y="59" font-weight="600" fill="{{ k }}">output</text>
-  {{ field(267, 59, "value", "0 sat") }}
-  {{ field(267, 73, "scriptPubKey", "<scriptPubKey>", "script") }}
-  <text x="222" y="93" fill="{{ m }}">the lock being proven, with nothing in it</text>
-  <text x="222" y="119" font-weight="600" fill="{{ k }}">input</text>
-  {{ field(267, 119, "prevout", "0000…0000:ffffffff") }}
-  <text x="267" y="133" fill="{{ m }}">the null outpoint: no such coin</text>
-  {{ field(267, 147, "sequence", "0") }}
-  {{ field(267, 176, "scriptSig OP_0", "<hash of message>", "hash") }}
-  <text x="222" y="196" fill="{{ m }}">the message, committed to the transaction</text>
-  <!-- txid of to_spend, consumed by to_sign -->
-  <line x1="332" y1="206" x2="332" y2="214" stroke="{{ m }}"/>
-  {{ pill(239, 216, 186, "SHA-256 twice, over the raw transaction") }}
-  {{ val(283, 252, "<txid of to_spend>", "txid") }}
-  <line x1="332" y1="257" x2="332" y2="266" stroke="{{ m }}" marker-end="url(#arr)"/>
-  <!-- to_sign -->
-  <rect x="212" y="268" width="240" height="252" rx="3" fill="none" stroke="{{ ln }}"/>
-  <text x="222" y="286" font-weight="700" fill="{{ st }}">to_sign <tspan font-weight="400" fill="{{ m }}">a transaction never broadcast</tspan></text>
-  {{ field(222, 304, "version", "0 · locktime 0") }}
-  <text x="222" y="326" font-weight="600" fill="{{ k }}">input</text>
-  {{ field(267, 326, "prevout", "<txid of to_spend>", "txid") }}
-  <text x="407" y="326" font-family="{{ mono }}" font-size="9" fill="{{ k }}">:0</text>
-  {{ field(267, 340, "sequence", "0") }}
-  {{ field(267, 358, "witness", "<the proof>", "proof") }}
-  <text x="222" y="380" fill="{{ m }}">what unlocks the scriptPubKey: signatures,</text>
-  <text x="222" y="394" fill="{{ m }}">and keys or a script when it needs them</text>
-  <text x="222" y="418" font-weight="600" fill="{{ k }}">output</text>
-  {{ field(267, 418, "value", "0 sat") }}
-  {{ field(267, 432, "scriptPubKey", "OP_RETURN") }}
-  <text x="222" y="454" fill="{{ m }}">nothing can spend it</text>
-  <text x="222" y="478" fill="{{ m }}">every signature commits to the txid above,</text>
-  <text x="222" y="492" fill="{{ m }}">and so to the message</text>
-  <!-- the proof -->
-  <rect x="1" y="300" width="178" height="100" rx="3" fill="none" stroke="{{ ln }}"/>
-  <text x="11" y="318" font-weight="700" fill="{{ st }}">The proof</text>
-  <text x="11" y="336" font-family="{{ mono }}" font-size="9" fill="{{ t.proof }}" font-weight="700">smpBABHMEQCI…</text>
-  <text x="11" y="354" fill="{{ k }}">the witness of to_sign, serialised</text>
-  <text x="11" y="368" fill="{{ k }}">and base64-encoded, prefix smp</text>
-  <text x="11" y="388" fill="{{ m }}">what a real spend would carry</text>
-  <line x1="180" y1="358" x2="210" y2="358" stroke="{{ t.proof }}" marker-end="url(#arrp)"/>
-  <!-- on the chain: a real transaction, in the same form -->
-  <rect x="478" y="1" width="221" height="204" rx="3" fill="none" stroke="{{ ln }}"/>
-  <text x="488" y="19" font-weight="700" fill="{{ st }}">On the chain <tspan font-weight="400" fill="{{ m }}">a real transaction, confirmed</tspan></text>
-  {{ field(488, 37, "version", "2 · locktime 0") }}
-  <text x="488" y="59" font-weight="600" fill="{{ k }}">output</text>
-  {{ field(528, 59, "value", "<locked amount>", "amount") }}
-  {{ field(528, 73, "scriptPubKey", "<scriptPubKey>", "script") }}
-  <text x="488" y="93" fill="{{ m }}">the same lock, with coins in it</text>
-  <text x="488" y="119" font-weight="600" fill="{{ k }}">input</text>
-  {{ field(528, 119, "prevout", "<the payer's coin>") }}
-  <text x="528" y="133" fill="{{ m }}">whoever paid the wallet</text>
-  {{ field(528, 147, "sequence", "…") }}
-  {{ field(528, 176, "witness", "<the payer's signature>") }}
-  <text x="488" y="196" fill="{{ m }}">a payment to the wallet</text>
-  <line x1="454" y1="70" x2="476" y2="70" stroke="{{ t.script }}" stroke-dasharray="3 3"/>
-  <!-- txid of the real transaction: the UTXO -->
-  <line x1="588" y1="206" x2="588" y2="214" stroke="{{ m }}"/>
-  {{ pill(495, 216, 186, "SHA-256 twice, over the raw transaction") }}
-  {{ val(552, 252, "<txid>:<vout>", "utxo") }}
-  <text x="500" y="252" fill="{{ m }}" font-size="8.5">the UTXO</text>
-  <line x1="588" y1="257" x2="588" y2="266" stroke="{{ m }}" marker-end="url(#arr)"/>
-  <!-- the verifier -->
-  <rect x="478" y="268" width="221" height="252" rx="3" fill="none" stroke="{{ ln }}"/>
-  <text x="488" y="286" font-weight="700" fill="{{ st }}">Verifier</text>
-  <text x="488" y="306" fill="{{ k }}">1  rebuilds to_spend from</text>
-  {{ val(500, 319, "<hash of message>", "hash") }}
-  <text x="500" y="332" fill="{{ k }}">and</text>
-  {{ val(522, 332, "<scriptPubKey>", "script") }}
-  <text x="488" y="352" fill="{{ k }}">2  rebuilds to_sign from</text>
-  {{ val(500, 365, "<txid of to_spend>", "txid") }}
-  <text x="500" y="378" fill="{{ k }}">and</text>
-  {{ val(522, 378, "<the proof>", "proof") }}
-  <text x="488" y="398" fill="{{ k }}">3  runs the consensus script engine</text>
-  <text x="488" y="411" fill="{{ k }}">    on to_sign's input:</text>
-  {{ val(500, 424, "<the proof>", "proof") }}
-  <text x="566" y="424" fill="{{ k }}">must unlock</text>
-  {{ val(500, 437, "<scriptPubKey>", "script") }}
-  <text x="590" y="437" fill="{{ k }}">as any spend must</text>
-  <text x="488" y="457" fill="{{ k }}">4  finds the UTXO on the chain:</text>
-  {{ val(500, 470, "<txid>:<vout>", "utxo") }}
-  <text x="584" y="470" fill="{{ k }}">unspent, holding</text>
-  {{ val(500, 483, "<locked amount>", "amount") }}
-  <text x="594" y="483" fill="{{ k }}">behind</text>
-  {{ val(500, 496, "<scriptPubKey>", "script") }}
-  <text x="488" y="514" fill="{{ m }}">1–3: the verify command; 4: the lookup</text>
+  <!-- the message, hashed into to_spend's scriptSig -->
+  <rect x="1" y="1" width="172" height="88" rx="3" fill="none" stroke="{{ ln }}"/>
+  <text x="11" y="19" font-weight="700" fill="{{ st }}">Message</text>
+  <text x="11" y="37" font-family="{{ mono }}" font-size="9" fill="{{ k }}">Proof of control 2026</text>
+  <text x="11" y="51" font-family="{{ mono }}" font-size="9" fill="{{ k }}">block:</text>
+  <text x="49" y="51" font-family="{{ mono }}" font-size="9" fill="{{ t.block }}">{{ r.period.end.height }} 000000…</text>
+  <text x="11" y="69" fill="{{ m }}">any text; here a title and</text>
+  <text x="11" y="83" fill="{{ m }}">a block line, dating the proof</text>
+  <line x1="87" y1="90" x2="87" y2="100" stroke="{{ m }}" marker-end="url(#arr)"/>
+  {{ pill(1, 102, 172, "SHA-256, tag BIP0322-signed-message", 8) }}
+  {{ val(38, 140, "<hash of message>", "hash") }}
+  <line x1="138" y1="136" x2="197" y2="136" stroke="{{ m }}" marker-end="url(#arr)"/>
+  <!-- the three transactions, in one form: version, input, output -->
+  {{ txbox(199, 40, "to_spend", "a transaction never broadcast") }}
+  {{ field(209, 76, "version", "0 · locktime 0") }}
+  <text x="209" y="98" font-weight="600" fill="{{ k }}">input</text>
+  {{ field(254, 98, "prevout", "0000…0000:ffffffff") }}
+  <text x="254" y="112" fill="{{ m }}">the null outpoint: no such coin</text>
+  {{ field(254, 126, "sequence", "0") }}
+  {{ field(254, 140, "scriptSig OP_0", "<hash of message>", "hash") }}
+  <text x="209" y="160" fill="{{ m }}">the message, committed to the transaction</text>
+  <text x="209" y="182" font-weight="600" fill="{{ k }}">output</text>
+  {{ field(254, 182, "value", "0 sat") }}
+  {{ field(254, 196, "scriptPubKey", "<scriptPubKey>", "script") }}
+  <text x="209" y="216" fill="{{ m }}">the lock being proven, with nothing in it</text>
+
+  {{ txbox(460, 40, "On the chain", "a real transaction, confirmed") }}
+  {{ field(470, 76, "version", "2 · locktime 0") }}
+  <text x="470" y="98" font-weight="600" fill="{{ k }}">input</text>
+  {{ field(515, 98, "prevout", "<the payer's coin>") }}
+  <text x="515" y="112" fill="{{ m }}">whoever paid the wallet</text>
+  {{ field(515, 126, "sequence", "…") }}
+  {{ field(515, 140, "witness", "<the payer's signature>") }}
+  <text x="470" y="160" fill="{{ m }}">a payment to the wallet</text>
+  <text x="470" y="182" font-weight="600" fill="{{ k }}">output</text>
+  {{ field(515, 182, "value", "<locked amount>", "amount") }}
+  {{ field(515, 196, "scriptPubKey", "<scriptPubKey>", "script") }}
+  <text x="470" y="216" fill="{{ m }}">the same lock, with coins in it</text>
+
+  <!-- each transaction's id, and what consumes it -->
+  <line x1="319" y1="229" x2="319" y2="238" stroke="{{ m }}"/>
+  {{ pill(226, 240, 186, "SHA-256 twice, over the raw transaction") }}
+  {{ val(270, 276, "<txid of to_spend>", "txid") }}
+  <line x1="319" y1="281" x2="319" y2="290" stroke="{{ m }}" marker-end="url(#arr)"/>
+  <line x1="580" y1="229" x2="580" y2="238" stroke="{{ m }}"/>
+  {{ pill(487, 240, 186, "SHA-256 twice, over the raw transaction") }}
+  <text x="490" y="276" fill="{{ m }}" font-size="8.5">the UTXO</text>
+  {{ val(544, 276, "<txid>:<vout>", "utxo") }}
+  <line x1="580" y1="281" x2="580" y2="290" stroke="{{ m }}" marker-end="url(#arr)"/>
+
+  <rect x="199" y="292" width="240" height="256" rx="3" fill="none" stroke="{{ ln }}"/>
+  <text x="209" y="310" font-weight="700" fill="{{ st }}">to_sign <tspan font-weight="400" fill="{{ m }}">a transaction never broadcast</tspan></text>
+  {{ field(209, 328, "version", "0 · locktime 0") }}
+  <text x="209" y="350" font-weight="600" fill="{{ k }}">input</text>
+  {{ field(254, 350, "prevout", "<txid of to_spend>", "txid") }}
+  <text x="400" y="350" font-family="{{ mono }}" font-size="9" fill="{{ k }}">:0</text>
+  <text x="254" y="364" fill="{{ m }}">the empty output of to_spend</text>
+  {{ field(254, 378, "sequence", "0") }}
+  {{ field(254, 392, "witness", "<the proof>", "proof") }}
+  <text x="209" y="412" fill="{{ m }}">what unlocks the scriptPubKey: signatures,</text>
+  <text x="209" y="426" fill="{{ m }}">and keys or a script when it needs them</text>
+  <text x="209" y="448" font-weight="600" fill="{{ k }}">output</text>
+  {{ field(254, 448, "value", "0 sat") }}
+  {{ field(254, 462, "scriptPubKey", "OP_RETURN") }}
+  <text x="209" y="482" fill="{{ m }}">nothing can spend it</text>
+  <text x="209" y="506" fill="{{ m }}">every signature commits to the txid above,</text>
+  <text x="209" y="520" fill="{{ m }}">and so to the message</text>
+
+  <!-- the proof, into to_sign's witness -->
+  <rect x="1" y="340" width="172" height="100" rx="3" fill="none" stroke="{{ ln }}"/>
+  <text x="11" y="358" font-weight="700" fill="{{ st }}">The proof</text>
+  <text x="11" y="376" font-family="{{ mono }}" font-size="9" fill="{{ t.proof }}" font-weight="700">smpBABHMEQCI…</text>
+  <text x="11" y="394" fill="{{ k }}">to_sign's witness, serialised</text>
+  <text x="11" y="408" fill="{{ k }}">and base64-encoded, prefix smp</text>
+  <text x="11" y="428" fill="{{ m }}">what a real spend would carry</text>
+  <line x1="174" y1="388" x2="197" y2="388" stroke="{{ t.proof }}" marker-end="url(#arrp)"/>
+
+  <!-- the verifier: to_sign in, the UTXO in -->
+  <rect x="460" y="292" width="240" height="256" rx="3" fill="none" stroke="{{ ln }}"/>
+  <line x1="441" y1="420" x2="458" y2="420" stroke="{{ m }}" marker-end="url(#arr)"/>
+  <text x="470" y="310" font-weight="700" fill="{{ st }}">Verifier</text>
+  <text x="470" y="330" fill="{{ k }}">1  rebuilds to_spend from</text>
+  {{ val(482, 343, "<hash of message>", "hash") }}
+  <text x="482" y="356" fill="{{ k }}">and</text>
+  {{ val(504, 356, "<scriptPubKey>", "script") }}
+  <text x="470" y="376" fill="{{ k }}">2  rebuilds to_sign from</text>
+  {{ val(482, 389, "<txid of to_spend>", "txid") }}
+  <text x="482" y="402" fill="{{ k }}">and</text>
+  {{ val(504, 402, "<the proof>", "proof") }}
+  <text x="470" y="422" fill="{{ k }}">3  runs the consensus script engine</text>
+  <text x="470" y="435" fill="{{ k }}">    on to_sign's input:</text>
+  {{ val(482, 448, "<the proof>", "proof") }}
+  <text x="548" y="448" fill="{{ k }}">must unlock</text>
+  {{ val(482, 461, "<scriptPubKey>", "script") }}
+  <text x="572" y="461" fill="{{ k }}">as any spend must</text>
+  <text x="470" y="481" fill="{{ k }}">4  finds the UTXO on the chain:</text>
+  {{ val(482, 494, "<txid>:<vout>", "utxo") }}
+  <text x="566" y="494" fill="{{ k }}">unspent, holding</text>
+  {{ val(482, 507, "<locked amount>", "amount") }}
+  <text x="576" y="507" fill="{{ k }}">behind</text>
+  {{ val(482, 520, "<scriptPubKey>", "script") }}
+  <text x="470" y="540" fill="{{ m }}">1–3: the verify command; 4: the lookup</text>
 </svg>
 <p class="caption">A proof of control is a spend from the scriptPubKey that can never happen: the coin it spends does not exist, but the witness is the one a real spend would need. On the chain, a real transaction pays an amount to the same scriptPubKey; that output is the UTXO the statement counts. The mechanism is the same for every kind of scriptPubKey.</p>
 <div class="small runin">
