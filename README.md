@@ -18,7 +18,7 @@ Two ways of working with it, the same tool for both:
 * **Continuously, for yourself.** Before broadcasting a spend, prove its change address (`bip322-audit prove ADDRESS --ledger LEDGER`, sign, finalize): a valid proof means the quorum controls where the change goes. New deposit addresses the same way, or with `snapshot --skip-proven LEDGER` after the fact. A report can then be produced at any time, with every coin backed by your own signed message; a coin that arrived after its proof is marked as such (the proof shows control, not the holding).
 * **On demand, for an auditor.** After the period's end, take one full bundle (no `--skip-proven`) over every output under a message that names the audit, and produce the report for the year. Every closing coin then has a proof dated after the closing block, and the chain lookup at that block shows the coin held. The auditor verifies the bundles and the report on their own node with `bip322-audit verify` and `bitcoin-cli`.
 
-The whole flow, for the holder and for the auditor, is in [docs/handbook.md](docs/handbook.md).
+The whole flow, for the holder and for the auditor, is in the [handbook](bip322reports/handbook.md); `bip322-reports handbook` prints it.
 
 ## Install
 

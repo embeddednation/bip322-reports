@@ -4,17 +4,31 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "bip322-reports"
-version = "0.8.4"
+version = "0.8.5"
 description = "Balance reports in which every coin is backed by a verified BIP-322 proof of control: periods, movements, reconciliation, HTML/CSV/PDF, on top of bip322-audit"
 requires-python = ">=3.10"
 license = "MIT"
 license-files = ["LICENSE"]
+readme = "README.md"
+authors = [{ name = "Embedded Nation AB" }]
+keywords = ["bitcoin", "bip322", "proof of control", "audit", "multisig", "psbt"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Programming Language :: Python :: 3",
+    "Intended Audience :: Financial and Insurance Industry",
+    "Topic :: Security :: Cryptography",
+    "Topic :: Office/Business :: Financial :: Accounting",
+]
 # Until the packages are on PyPI, dependencies are direct git references at pinned tags, so that
 # `pip install "bip322-reports @ git+ssh://git@github.com/embeddednation/bip322-reports.git@v0.2.0"` installs the stack.
 dependencies = [
     "bip322-audit @ git+ssh://git@github.com/embeddednation/bip322-audit.git@v0.10.5",
     "jinja2>=3.1",
 ]
+
+[project.urls]
+Homepage = "https://github.com/embeddednation/bip322-reports"
+Changelog = "https://github.com/embeddednation/bip322-reports/blob/main/CHANGELOG.md"
 
 [project.optional-dependencies]
 kernel = ["bip322-audit[kernel] @ git+ssh://git@github.com/embeddednation/bip322-audit.git@v0.10.5"]
@@ -28,7 +42,7 @@ bip322-reports = "bip322reports.cli:main"
 include = ["bip322reports*"]
 
 [tool.setuptools.package-data]
-bip322reports = ["templates/*.html", "fonts/*.woff2", "fonts/LICENSE.md"]
+bip322reports = ["templates/*.html", "fonts/*.woff2", "fonts/LICENSE.md", "handbook.md"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

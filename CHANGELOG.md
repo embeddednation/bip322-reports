@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.8.5 (2026-09-23)
+
+- The handbook (the yearly flow end to end, for the holder and for the
+  auditor) ships with the package: `bip322-reports handbook` prints it.
+- Project metadata for PyPI (readme, authors, keywords, classifiers, URLs)
+  and a trusted-publishing workflow, run by hand until the first release.
+
 ## 0.8.4 (2026-09-23)
 
 - 0.8.3 was tagged with one failing test (a fiat expectation missing the

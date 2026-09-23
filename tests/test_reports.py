@@ -354,3 +354,11 @@ def test_change_address_proven_before_the_spend_covers_the_change_output(tmp_pat
     # after the year-end bundle nothing is left to prove
     with pytest.raises(Exception, match="already proven"):
         take_snapshot(node40, wallet, "x", skip_addresses=proven_addresses([ledger]))
+
+
+def test_handbook_ships_with_the_package(capsys):
+    from bip322reports import cli as cli_module
+
+    assert cli_module.main(["handbook"]) == 0
+    out = capsys.readouterr().out
+    assert out.startswith("# The yearly proof of control, end to end") and "auditor" in out

@@ -292,8 +292,17 @@ def build_parser() -> argparse.ArgumentParser:
         ],
     )
 
-    add_help_command("bip322-reports", sub, {"Workflow": ["history", "block", "balance", "report", "help"]})
+    p = sub.add_parser("handbook", help="print the handbook: the yearly flow end to end, for the holder and for the auditor")
+    p.set_defaults(func=cmd_handbook)
+
+    add_help_command("bip322-reports", sub, {"Workflow": ["history", "block", "balance", "report", "handbook", "help"]})
     return parser
+
+
+def cmd_handbook(args) -> int:
+    """The whole flow, holder's and auditor's, as shipped with the package."""
+    print((Path(__file__).parent / "handbook.md").read_text(), end="")
+    return 0
 
 
 def main(argv: list[str] | None = None) -> int:

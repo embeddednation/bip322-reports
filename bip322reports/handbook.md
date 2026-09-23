@@ -3,7 +3,7 @@
 What the holder does, what the auditor does, and what the pieces are. The
 command references are the three READMEs ([bip322-core](https://github.com/embeddednation/bip322-core),
 [bip322-audit](https://github.com/embeddednation/bip322-audit),
-[bip322-reports](../README.md)); this is the flow. Everything here is
+[bip322-reports](https://github.com/embeddednation/bip322-reports)); this is the flow. `bip322-reports handbook` prints this file. Everything here is
 exercised by `examples/reports_walkthrough.sh` on a throwaway regtest node,
 which is the executable version of this document.
 
