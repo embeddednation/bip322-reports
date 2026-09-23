@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.7.7 (2026-09-23)
+
+- Section 4 says what matters and no more: the three transactions show
+  only their input (prevout and the unlocking data) and output (value and
+  scriptPubKey); version, locktime and sequence are gone from the figure
+  and the prose. The message box holds its own hashing and hands the hash
+  to to_spend the way the proof box hands the witness to to_sign. The
+  prose no longer describes this wallet's script; it explains the
+  procedure for any scriptPubKey.
+
 ## 0.7.6 (2026-09-23)
 
 - A label in the figure's proof box no longer touches its border.

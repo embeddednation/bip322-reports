@@ -268,119 +268,104 @@
 {% macro field(x, y, name, value, role=None) -%}
 <text x="{{ x }}" y="{{ y }}" font-family="{{ mono }}" font-size="9" fill="{{ k }}">{{ name }}</text>{% if role %}{{ val(x + (name | length + 1) * 5.4, y, value, role) }}{% else %}<text x="{{ x + (name | length + 1) * 5.4 }}" y="{{ y }}" font-family="{{ mono }}" font-size="9" fill="{{ k }}">{{ value }}</text>{% endif %}
 {%- endmacro %}
-{% macro txbox(x, y, title, sub) -%}
-<rect x="{{ x }}" y="{{ y }}" width="240" height="188" rx="3" fill="none" stroke="{{ ln }}"/>
+{% macro txbox(x, y, h, title, sub) -%}
+<rect x="{{ x }}" y="{{ y }}" width="240" height="{{ h }}" rx="3" fill="none" stroke="{{ ln }}"/>
 <text x="{{ x + 10 }}" y="{{ y + 18 }}" font-weight="700" fill="{{ st }}">{{ title }} <tspan font-weight="400" fill="{{ m }}">{{ sub }}</tspan></text>
+<text x="{{ x + 10 }}" y="{{ y + 40 }}" font-weight="600" fill="{{ k }}">input</text>
+<text x="{{ x + 10 }}" y="{{ y + 110 }}" font-weight="600" fill="{{ k }}">output</text>
 {%- endmacro %}
-<svg class="fig" viewBox="0 0 700 552" xmlns="http://www.w3.org/2000/svg" font-family="{{ t.font_label | safe }}" font-size="10">
+<svg class="fig" viewBox="0 0 700 514" xmlns="http://www.w3.org/2000/svg" font-family="{{ t.font_label | safe }}" font-size="10">
   <defs>
     <marker id="arr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="{{ m }}"/></marker>
     <marker id="arrp" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="{{ t.proof }}"/></marker>
+    <marker id="arrh" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="{{ t.hash }}"/></marker>
   </defs>
-  <!-- the message, hashed into to_spend's scriptSig -->
-  <rect x="1" y="1" width="172" height="88" rx="3" fill="none" stroke="{{ ln }}"/>
+  <!-- the message and its hash, into to_spend's scriptSig -->
+  <rect x="1" y="1" width="172" height="130" rx="3" fill="none" stroke="{{ ln }}"/>
   <text x="11" y="19" font-weight="700" fill="{{ st }}">Message</text>
   <text x="11" y="37" font-family="{{ mono }}" font-size="9" fill="{{ k }}">Proof of control 2026</text>
   <text x="11" y="51" font-family="{{ mono }}" font-size="9" fill="{{ k }}">block:</text>
   <text x="49" y="51" font-family="{{ mono }}" font-size="9" fill="{{ t.block }}">{{ r.period.end.height }} 000000…</text>
-  <text x="11" y="69" fill="{{ m }}">any text; here a title and</text>
-  <text x="11" y="83" fill="{{ m }}">a block line, dating the proof</text>
-  <line x1="87" y1="90" x2="87" y2="100" stroke="{{ m }}" marker-end="url(#arr)"/>
-  {{ pill(1, 102, 172, "SHA-256, tag BIP0322-signed-message", 8) }}
-  {{ val(38, 140, "<hash of message>", "hash") }}
-  <line x1="138" y1="136" x2="197" y2="136" stroke="{{ m }}" marker-end="url(#arr)"/>
-  <!-- the three transactions, in one form: version, input, output -->
-  {{ txbox(199, 40, "to_spend", "a transaction never broadcast") }}
-  {{ field(209, 76, "version", "0 · locktime 0") }}
-  <text x="209" y="98" font-weight="600" fill="{{ k }}">input</text>
-  {{ field(254, 98, "prevout", "0000…0000:ffffffff") }}
-  <text x="254" y="112" fill="{{ m }}">the null outpoint: no such coin</text>
-  {{ field(254, 126, "sequence", "0") }}
-  {{ field(254, 140, "scriptSig OP_0", "<hash of message>", "hash") }}
-  <text x="209" y="160" fill="{{ m }}">the message, committed to the transaction</text>
-  <text x="209" y="182" font-weight="600" fill="{{ k }}">output</text>
-  {{ field(254, 182, "value", "0 sat") }}
-  {{ field(254, 196, "scriptPubKey", "<scriptPubKey>", "script") }}
-  <text x="209" y="216" fill="{{ m }}">the lock being proven, with nothing in it</text>
+  <text x="11" y="69" fill="{{ m }}">the block line dates the proof</text>
+  {{ pill(37, 80, 100, "SHA-256, tagged") }}
+  {{ val(38, 118, "<hash of message>", "hash") }}
+  <line x1="174" y1="114" x2="197" y2="114" stroke="{{ t.hash }}" marker-end="url(#arrh)"/>
+  <!-- the three transactions, in one form: input, output -->
+  {{ txbox(199, 50, 156, "to_spend", "a transaction never broadcast") }}
+  {{ field(254, 90, "prevout", "0000…0000:ffffffff") }}
+  <text x="254" y="104" fill="{{ m }}">the null outpoint: no such coin</text>
+  {{ field(254, 118, "scriptSig OP_0", "<hash of message>", "hash") }}
+  <text x="209" y="138" fill="{{ m }}">the message, committed to the transaction</text>
+  {{ field(254, 160, "value", "0 sat") }}
+  {{ field(254, 174, "scriptPubKey", "<scriptPubKey>", "script") }}
+  <text x="209" y="194" fill="{{ m }}">the lock being proven, with nothing in it</text>
 
-  {{ txbox(460, 40, "On the chain", "a real transaction, confirmed") }}
-  {{ field(470, 76, "version", "2 · locktime 0") }}
-  <text x="470" y="98" font-weight="600" fill="{{ k }}">input</text>
-  {{ field(515, 98, "prevout", "<the payer's coin>") }}
-  <text x="515" y="112" fill="{{ m }}">whoever paid the wallet</text>
-  {{ field(515, 126, "sequence", "…") }}
-  {{ field(515, 140, "witness", "<the payer's signature>") }}
-  <text x="470" y="160" fill="{{ m }}">a payment to the wallet</text>
-  <text x="470" y="182" font-weight="600" fill="{{ k }}">output</text>
-  {{ field(515, 182, "value", "<locked amount>", "amount") }}
-  {{ field(515, 196, "scriptPubKey", "<scriptPubKey>", "script") }}
-  <text x="470" y="216" fill="{{ m }}">the same lock, with coins in it</text>
+  {{ txbox(460, 50, 156, "On the chain", "a real transaction, confirmed") }}
+  {{ field(515, 90, "prevout", "<the payer's coin>") }}
+  <text x="515" y="104" fill="{{ m }}">whoever paid the wallet</text>
+  {{ field(515, 118, "witness", "<the payer's signature>") }}
+  <text x="470" y="138" fill="{{ m }}">a payment to the wallet</text>
+  {{ field(515, 160, "value", "<locked amount>", "amount") }}
+  {{ field(515, 174, "scriptPubKey", "<scriptPubKey>", "script") }}
+  <text x="470" y="194" fill="{{ m }}">the same lock, with coins in it</text>
 
   <!-- each transaction's id, and what consumes it -->
-  <line x1="319" y1="229" x2="319" y2="238" stroke="{{ m }}"/>
-  {{ pill(226, 240, 186, "SHA-256 twice, over the raw transaction") }}
-  {{ val(270, 276, "<txid of to_spend>", "txid") }}
-  <line x1="319" y1="281" x2="319" y2="290" stroke="{{ m }}" marker-end="url(#arr)"/>
-  <line x1="580" y1="229" x2="580" y2="238" stroke="{{ m }}"/>
-  {{ pill(487, 240, 186, "SHA-256 twice, over the raw transaction") }}
-  <text x="490" y="276" fill="{{ m }}" font-size="8.5">the UTXO</text>
-  {{ val(544, 276, "<txid>:<vout>", "utxo") }}
-  <line x1="580" y1="281" x2="580" y2="290" stroke="{{ m }}" marker-end="url(#arr)"/>
+  <line x1="319" y1="207" x2="319" y2="216" stroke="{{ m }}"/>
+  {{ pill(226, 218, 186, "SHA-256 twice, over the raw transaction") }}
+  {{ val(270, 254, "<txid of to_spend>", "txid") }}
+  <line x1="319" y1="259" x2="319" y2="268" stroke="{{ m }}" marker-end="url(#arr)"/>
+  <line x1="580" y1="207" x2="580" y2="216" stroke="{{ m }}"/>
+  {{ pill(487, 218, 186, "SHA-256 twice, over the raw transaction") }}
+  <text x="490" y="254" fill="{{ m }}" font-size="8.5">the UTXO</text>
+  {{ val(544, 254, "<txid>:<vout>", "utxo") }}
+  <line x1="580" y1="259" x2="580" y2="268" stroke="{{ m }}" marker-end="url(#arr)"/>
 
-  <rect x="199" y="292" width="240" height="256" rx="3" fill="none" stroke="{{ ln }}"/>
-  <text x="209" y="310" font-weight="700" fill="{{ st }}">to_sign <tspan font-weight="400" fill="{{ m }}">a transaction never broadcast</tspan></text>
-  {{ field(209, 328, "version", "0 · locktime 0") }}
-  <text x="209" y="350" font-weight="600" fill="{{ k }}">input</text>
-  {{ field(254, 350, "prevout", "<txid of to_spend>", "txid") }}
-  <text x="400" y="350" font-family="{{ mono }}" font-size="9" fill="{{ k }}">:0</text>
-  <text x="254" y="364" fill="{{ m }}">the empty output of to_spend</text>
-  {{ field(254, 378, "sequence", "0") }}
-  {{ field(254, 392, "witness", "<the proof>", "proof") }}
-  <text x="209" y="412" fill="{{ m }}">what unlocks the scriptPubKey: signatures,</text>
-  <text x="209" y="426" fill="{{ m }}">and keys or a script when it needs them</text>
-  <text x="209" y="448" font-weight="600" fill="{{ k }}">output</text>
-  {{ field(254, 448, "value", "0 sat") }}
-  {{ field(254, 462, "scriptPubKey", "OP_RETURN") }}
-  <text x="209" y="482" fill="{{ m }}">nothing can spend it</text>
-  <text x="209" y="506" fill="{{ m }}">every signature commits to the txid above,</text>
-  <text x="209" y="520" fill="{{ m }}">and so to the message</text>
+  {{ txbox(199, 270, 240, "to_sign", "a transaction never broadcast") }}
+  {{ field(254, 310, "prevout", "<txid of to_spend>", "txid") }}
+  <text x="400" y="310" font-family="{{ mono }}" font-size="9" fill="{{ k }}">:0</text>
+  <text x="254" y="324" fill="{{ m }}">the empty output of to_spend</text>
+  {{ field(254, 338, "witness", "<the proof>", "proof") }}
+  <text x="209" y="358" fill="{{ m }}">what unlocks the scriptPubKey</text>
+  {{ field(254, 380, "value", "0 sat") }}
+  {{ field(254, 394, "scriptPubKey", "OP_RETURN") }}
+  <text x="209" y="414" fill="{{ m }}">nothing can spend it</text>
+  <text x="209" y="438" fill="{{ m }}">every signature in the witness commits to</text>
+  <text x="209" y="452" fill="{{ m }}">the txid above, and so to the message</text>
 
   <!-- the proof, into to_sign's witness -->
-  <rect x="1" y="340" width="172" height="100" rx="3" fill="none" stroke="{{ ln }}"/>
-  <text x="11" y="358" font-weight="700" fill="{{ st }}">The proof</text>
-  <text x="11" y="376" font-family="{{ mono }}" font-size="9" fill="{{ t.proof }}" font-weight="700">smpBABHMEQCI…</text>
-  <text x="11" y="394" fill="{{ k }}">to_sign's witness, serialised</text>
-  <text x="11" y="408" fill="{{ k }}">base64-encoded, prefix smp</text>
-  <text x="11" y="428" fill="{{ m }}">what a real spend would carry</text>
-  <line x1="174" y1="388" x2="197" y2="388" stroke="{{ t.proof }}" marker-end="url(#arrp)"/>
+  <rect x="1" y="292" width="172" height="86" rx="3" fill="none" stroke="{{ ln }}"/>
+  <text x="11" y="310" font-weight="700" fill="{{ st }}">The proof</text>
+  <text x="11" y="328" fill="{{ k }}">to_sign's witness, base64-</text>
+  <text x="11" y="342" fill="{{ k }}">encoded with the prefix smp:</text>
+  <text x="11" y="360" font-family="{{ mono }}" font-size="9" fill="{{ t.proof }}" font-weight="700">smpBABHMEQCI…</text>
+  <line x1="174" y1="334" x2="197" y2="334" stroke="{{ t.proof }}" marker-end="url(#arrp)"/>
 
   <!-- the verifier: to_sign in, the UTXO in -->
-  <rect x="460" y="292" width="240" height="256" rx="3" fill="none" stroke="{{ ln }}"/>
-  <line x1="441" y1="420" x2="458" y2="420" stroke="{{ m }}" marker-end="url(#arr)"/>
-  <text x="470" y="310" font-weight="700" fill="{{ st }}">Verifier</text>
-  <text x="470" y="330" fill="{{ k }}">1  rebuilds to_spend from</text>
-  {{ val(482, 343, "<hash of message>", "hash") }}
-  <text x="482" y="356" fill="{{ k }}">and</text>
-  {{ val(504, 356, "<scriptPubKey>", "script") }}
-  <text x="470" y="376" fill="{{ k }}">2  rebuilds to_sign from</text>
-  {{ val(482, 389, "<txid of to_spend>", "txid") }}
-  <text x="482" y="402" fill="{{ k }}">and</text>
-  {{ val(504, 402, "<the proof>", "proof") }}
-  <text x="470" y="422" fill="{{ k }}">3  runs the consensus script engine</text>
-  <text x="470" y="435" fill="{{ k }}">    on to_sign's input:</text>
-  {{ val(482, 448, "<the proof>", "proof") }}
-  <text x="548" y="448" fill="{{ k }}">must unlock</text>
-  {{ val(482, 461, "<scriptPubKey>", "script") }}
-  <text x="572" y="461" fill="{{ k }}">as any spend must</text>
-  <text x="470" y="481" fill="{{ k }}">4  finds the UTXO on the chain:</text>
-  {{ val(482, 494, "<txid>:<vout>", "utxo") }}
-  <text x="566" y="494" fill="{{ k }}">unspent, holding</text>
-  {{ val(482, 507, "<locked amount>", "amount") }}
-  <text x="576" y="507" fill="{{ k }}">behind</text>
-  {{ val(482, 520, "<scriptPubKey>", "script") }}
-  <text x="470" y="540" fill="{{ m }}">1–3: the verify command; 4: the lookup</text>
+  <rect x="460" y="270" width="240" height="240" rx="3" fill="none" stroke="{{ ln }}"/>
+  <line x1="441" y1="370" x2="458" y2="370" stroke="{{ m }}" marker-end="url(#arr)"/>
+  <text x="470" y="288" font-weight="700" fill="{{ st }}">Verifier</text>
+  <text x="470" y="308" fill="{{ k }}">1  rebuilds to_spend from</text>
+  {{ val(482, 321, "<hash of message>", "hash") }}
+  <text x="482" y="334" fill="{{ k }}">and</text>
+  {{ val(504, 334, "<scriptPubKey>", "script") }}
+  <text x="470" y="354" fill="{{ k }}">2  rebuilds to_sign from</text>
+  {{ val(482, 367, "<txid of to_spend>", "txid") }}
+  <text x="482" y="380" fill="{{ k }}">and</text>
+  {{ val(504, 380, "<the proof>", "proof") }}
+  <text x="470" y="400" fill="{{ k }}">3  checks, as a node would for any spend,</text>
+  <text x="482" y="413" fill="{{ k }}">that</text>
+  {{ val(506, 413, "<the proof>", "proof") }}
+  <text x="572" y="413" fill="{{ k }}">unlocks</text>
+  {{ val(482, 426, "<scriptPubKey>", "script") }}
+  <text x="470" y="446" fill="{{ k }}">4  finds the UTXO on the chain:</text>
+  {{ val(482, 459, "<txid>:<vout>", "utxo") }}
+  <text x="566" y="459" fill="{{ k }}">unspent, holding</text>
+  {{ val(482, 472, "<locked amount>", "amount") }}
+  <text x="576" y="472" fill="{{ k }}">behind</text>
+  {{ val(482, 485, "<scriptPubKey>", "script") }}
+  <text x="470" y="503" fill="{{ m }}">1–3: the verify command; 4: the lookup</text>
 </svg>
-<p class="caption">A proof of control is a spend from the scriptPubKey that can never happen: the coin it spends does not exist, but the witness is the one a real spend would need. On the chain, a real transaction pays an amount to the same scriptPubKey; that output is the UTXO the statement counts. The mechanism is the same for every kind of scriptPubKey.</p>
+<p class="caption">A proof of control is a spend that can never happen: a made-up transaction locks nothing to the real UTXO's scriptPubKey, a second one spends it with exactly what a real spend would need, and that unlocking data is the proof. The mechanism is the same for every kind of scriptPubKey.</p>
 <div class="small runin">
   {% set S = '<span class="hl-script">scriptPubKey</span>' %}
   {% set H = '<span class="hl-hash">hash of the message</span>' %}
@@ -388,12 +373,11 @@
   {% set P = '<span class="hl-proof">proof</span>' %}
   {% set U = '<span class="hl-utxo">UTXO</span>' %}
   {% set B = '<span class="hl-block">block</span>' %}
-  <p><strong>Coins and locks.</strong> A balance is a set of unspent transaction outputs, {{ U | safe }}s. Each carries an amount and a {{ S | safe }}, the condition a transaction spending it must meet. The condition can be of any kind the network accepts: a signature from one key (pay to a public key hash), whatever a script demands (pay to a script hash), a taproot output. A {{ U | safe }} comes into being when a real transaction, with inputs and outputs like any other, pays an amount to a {{ S | safe }}; it is named by that transaction's id and the output's index. Whoever can meet the condition controls every {{ U | safe }} locked to it, so control is a property of the {{ S | safe }}, and that is what a proof is about. This wallet's {{ S | safe }}s are pay-to-witness-script-hash: <code>OP_0 &lt;SHA-256 of a witness script&gt;</code>, the witness script requiring signatures from {{ r.policy or "m of n" }} named keys.</p>
-  <p><strong>The message.</strong> The text shown on each {{ U | safe }} page: here a title line, and a line naming a {{ B | safe }} by height, hash and time. The hash of a block cannot be known before the block exists, so the proof is no older than that {{ B | safe }}. The message is hashed with SHA-256 under the tag <code>BIP0322-signed-message</code>, giving the {{ H | safe }}, which is what enters the transactions.</p>
-  <p><strong>to_spend.</strong> Version 0, locktime 0. One output of 0 satoshi with the {{ S | safe }} being proven: the lock, with nothing in it. One input spending the null outpoint (txid all zeros, index ffffffff), which no transaction has ever created, with sequence 0 and a scriptSig of <code>OP_0</code> followed by the {{ H | safe }}. Like every transaction it has an id, SHA-256 taken twice over its bytes, the {{ X | safe }}; since those bytes are fixed by the message and the {{ S | safe }}, so is the id.</p>
-  <p><strong>to_sign.</strong> Version 0, locktime 0. One input whose prevout is the {{ X | safe }} and output index 0, sequence 0; one output of 0 satoshi to <code>OP_RETURN</code>, which nothing can spend. The input's witness is what the signers produce, and it is exactly the unlocking data a real spend from the {{ S | safe }} would carry: for a single-key lock, one signature; for this wallet, {{ r.policy.split(" of ")[0] if r.policy else "m" }} signatures and the witness script naming its {{ r.policy.split(" of ")[1] if r.policy else "n" }} keys. Each signature commits to to_sign, hence to the {{ X | safe }}, hence to the {{ H | safe }} and the message.</p>
-  <p><strong>The {{ P | safe }}.</strong> That witness, serialised as in a transaction and base64-encoded with the prefix <code>smp</code> (BIP-322's simple format, v2.0.0). Nothing else needs to be kept: the verifier rebuilds both transactions from the message and the {{ S | safe }}.</p>
-  <p><strong>Verification.</strong> The verifier rebuilds to_spend from the {{ H | safe }} and the {{ S | safe }}, rebuilds to_sign from the {{ X | safe }} with the {{ P | safe }} as its witness, and runs the consensus script engine on that input exactly as a node validating a block would: the {{ P | safe }} must unlock the {{ S | safe }} under the same rules that govern every spend on the network, whatever kind of lock it is; for this wallet, the script must hash to the value in the {{ S | safe }} and enough of the keys it names must have signed. The engines named in each output do this independently; one of them is Bitcoin Core's own consensus library. Neither transaction spends a coin that exists, so neither can ever be confirmed: a {{ P | safe }} cannot move funds. That is the <em>verify</em> command on each {{ U | safe }} page; the <em>lookup</em> beside it is the fourth step, finding the {{ U | safe }} in the chain's set of unspent outputs, with its amount and the same {{ S | safe }} bytes the {{ P | safe }} was verified against.</p>
+  <p><strong>Coins and locks.</strong> A balance is a set of unspent transaction outputs, {{ U | safe }}s. Each was created by a transaction paying an amount to a {{ S | safe }}, the lock a later transaction must open to spend it, and is named by that transaction's id and the output's index. Whoever can open the lock controls every {{ U | safe }} behind it, so control is a property of the {{ S | safe }}, and that is what a proof is about. Locks come in several kinds, a single key, a script, a taproot output; the proof works the same way for all of them.</p>
+  <p><strong>The message.</strong> The text on each {{ U | safe }} page: a title, and a line naming a {{ B | safe }} by height, hash and time. A block's hash cannot be known before the block exists, so the proof is no older than that {{ B | safe }}. The message is hashed (SHA-256 under the tag <code>BIP0322-signed-message</code>), and the {{ H | safe }} is what enters the transactions.</p>
+  <p><strong>Two transactions that never reach the network.</strong> <em>to_spend</em> has an output with the same {{ S | safe }} as the real {{ U | safe }} and nothing in it, and an input that spends no coin at all, the null outpoint, carrying the {{ H | safe }}. <em>to_sign</em> spends that empty output, naming it by the {{ X | safe }}, and pays nothing to <code>OP_RETURN</code>, which no one can spend. Neither can ever be confirmed, since the coin they pass along does not exist: a proof cannot move funds.</p>
+  <p><strong>The {{ P | safe }}.</strong> to_sign's input must be unlocked like any spend from that {{ S | safe }}, so the signers produce its witness, exactly what a real spend would carry; every signature in it commits to the {{ X | safe }}, and through it to the message. That witness, base64-encoded with the prefix <code>smp</code> (BIP-322's simple format), is the {{ P | safe }}. Nothing else needs to be kept: the verifier rebuilds both transactions from the message and the {{ S | safe }}.</p>
+  <p><strong>Verification.</strong> The verifier rebuilds to_spend from the {{ H | safe }} and the {{ S | safe }}, rebuilds to_sign from the {{ X | safe }} with the {{ P | safe }} as its witness, and checks that input exactly as a node validating a block would: the {{ P | safe }} must unlock the {{ S | safe }} under the rules that govern every spend, whatever kind of lock it is. That is the <em>verify</em> command on each {{ U | safe }} page. The <em>lookup</em> beside it finds the {{ U | safe }} in the chain's set of unspent outputs, with its amount and the same {{ S | safe }}. The engines named in each output make the check independently; one of them is Bitcoin Core's own consensus library.</p>
   <p><strong>What it shows.</strong> That at the {{ B | safe }} named in the message the holder could produce a valid spend from the {{ S | safe }}, which is what controlling the {{ U | safe }}s locked to it means; a {{ U | safe }} confirmed after that {{ B | safe }} is covered by a later {{ P | safe }}. Control, not title: not who owns the coins, nor what liabilities stand against them. Nothing about any time after the {{ B | safe }}; a new {{ P | safe }} over a new {{ B | safe }} does.</p>
 </div>
 
