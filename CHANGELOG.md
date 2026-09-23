@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.7.6 (2026-09-23)
+
+- A label in the figure's proof box no longer touches its border.
+
 ## 0.7.5 (2026-09-23)
 
 - The figure's three transactions share one layout: version, input
