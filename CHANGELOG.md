@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.7.11 (2026-09-23)
+
+- The notes call a P2WPKH wallet "single key" rather than "1 of 1 keys".
+
 ## 0.7.10 (2026-09-23)
 
 - The figure's distance from its heading matches the tables'.

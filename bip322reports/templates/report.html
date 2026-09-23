@@ -384,7 +384,7 @@
 <h3>Notes</h3>
 <div class="small runin muted">
   <p>Amounts in BTC to eight decimals, negatives in parentheses{% if r.fiat %}; {{ r.fiat.currency }} from {{ r.fiat.source }} at the rate on each transaction's day{% endif %}. Net is received less spent, fees included.</p>
-  <p>Wallet {{ r.label }}{% if r.policy %}, {{ r.policy }} keys{% endif %}, {{ r.chain }} chain; opening figures at block {{ r.period.start.height }}, closing at block {{ r.period.end.height }}{% if r.period.to_tip %}, the tip when prepared{% endif %}. Holdings and movements as known to the holder's node; no descriptor or extended public key is disclosed.</p>
+  <p>Wallet {{ r.label }}{% if r.policy == "1 of 1" %}, single key{% elif r.policy %}, {{ r.policy }} keys{% endif %}, {{ r.chain }} chain; opening figures at block {{ r.period.start.height }}, closing at block {{ r.period.end.height }}{% if r.period.to_tip %}, the tip when prepared{% endif %}. Holdings and movements as known to the holder's node; no descriptor or extended public key is disclosed.</p>
   <p>Prepared {{ r.generated_utc | utc }} by {{ r.tool }}; reference {{ r.report_id }}. With this statement: <code>{{ r.name | default("report") }}.json</code>, <code>{{ r.name | default("report") }}.csv</code>{% if r.bundles %} and the proofs, {% for b in r.bundles %}<code>ledger/{{ b.bundle }}</code>{% if not loop.last %}, {% endif %}{% endfor %}{% endif %}; <code>bip322-audit verify FILE</code> checks a proofs file against a node, and the commands on the UTXO pages paste as they stand. <code>pip install bip322-reports</code>.</p>
 </div>
 </div>
